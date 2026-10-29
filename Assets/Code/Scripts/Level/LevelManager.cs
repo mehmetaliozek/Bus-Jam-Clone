@@ -127,6 +127,7 @@ public class LevelManager : MonoBehaviour
         if (_passengerController != null)
         {
             _passengerController.SetInputEnabled(false);
+            _passengerController.CancelMovements();
         }
 
         if (_levelTimer != null)

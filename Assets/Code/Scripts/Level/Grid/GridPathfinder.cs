@@ -15,44 +15,39 @@ public class GridPathfinder
 
     private readonly HashSet<Vector2Int> _reachableCells = new HashSet<Vector2Int>();
 
+    private readonly Dictionary<Vector2Int, Vector2Int> _nextTowardsExit = new Dictionary<Vector2Int, Vector2Int>();
+
     public void CalculateReachableCells(GridBuilder gridBuilder)
     {
         Clear();
 
         if (gridBuilder == null) return;
 
-        for (int i = 0; i < gridBuilder.ExitCells.Count; i++)
+        foreach (GridCell exit in gridBuilder.ExitCells)
         {
-            VisitCell(gridBuilder.ExitCells[i]);
+            if (exit == null) continue;
+            if (!_reachableCells.Add(exit.Coordinates)) continue;
+
+            if (!exit.IsOccupied) _cellsToCheck.Enqueue(exit);
         }
 
         while (_cellsToCheck.Count > 0)
         {
-            GridCell currentCell = _cellsToCheck.Dequeue();
+            GridCell current = _cellsToCheck.Dequeue();
 
-            for (int i = 0; i < _directions.Length; i++)
+            foreach (Vector2Int direction in _directions)
             {
-                Vector2Int coordinates = currentCell.Coordinates + _directions[i];
+                Vector2Int coordinates = current.Coordinates + direction;
 
-                if (!gridBuilder.TryGetCell(coordinates, out GridCell nextCell))
-                {
-                    continue;
-                }
+                if (!gridBuilder.TryGetCell(coordinates, out GridCell next)) continue;
 
-                VisitCell(nextCell);
+                if (!_reachableCells.Add(coordinates)) continue;
+
+                _nextTowardsExit.Add(coordinates, current.Coordinates);
+
+                if (!next.IsOccupied) _cellsToCheck.Enqueue(next);
             }
         }
-    }
-
-    private void VisitCell(GridCell cell)
-    {
-        if (cell == null) return;
-
-        if (!_reachableCells.Add(cell.Coordinates)) return;
-
-        if (cell.IsOccupied) return;
-
-        _cellsToCheck.Enqueue(cell);
     }
 
     public bool CanReachExit(Passenger passenger, GridBuilder gridBuilder)
@@ -61,18 +56,37 @@ public class GridPathfinder
         if (passenger.State != PassengerState.OnGrid) return false;
 
         if (!gridBuilder.TryGetCell(passenger.Coordinates, out GridCell cell))
-        {
             return false;
+
+        return cell.Passenger == passenger && _reachableCells.Contains(passenger.Coordinates);
+    }
+
+    public bool TryGetPath(Passenger passenger, GridBuilder gridBuilder, out List<Vector3> path)
+    {
+        path = null;
+
+        if (!CanReachExit(passenger, gridBuilder))
+            return false;
+
+        path = new List<Vector3>();
+
+        Vector2Int coordinates = passenger.Coordinates;
+
+        path.Add(gridBuilder.GetCell(coordinates).PassengerPosition);
+
+        while (_nextTowardsExit.TryGetValue(coordinates, out Vector2Int next))
+        {
+            coordinates = next;
+            path.Add(gridBuilder.GetCell(coordinates).PassengerPosition);
         }
 
-        if (cell.Passenger != passenger) return false;
-
-        return _reachableCells.Contains(passenger.Coordinates);
+        return true;
     }
 
     public void Clear()
     {
         _cellsToCheck.Clear();
         _reachableCells.Clear();
+        _nextTowardsExit.Clear();
     }
 }

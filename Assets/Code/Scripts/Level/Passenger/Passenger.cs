@@ -1,7 +1,7 @@
 using System;
 using UnityEngine;
+using UnityEngine.UIElements;
 
-[RequireComponent(typeof(Renderer))]
 public class Passenger : MonoBehaviour
 {
     public event Action<Passenger> Clicked;
@@ -11,11 +11,15 @@ public class Passenger : MonoBehaviour
     public PassengerState State { get; private set; }
     public bool CanMove { get; private set; }
 
-    private Renderer _renderer;
+    public PassengerMovement Movement { get; private set; }
+
+    [SerializeField] private Renderer _renderer;
+    private PassengerAnimatorController _animatorController;
 
     private void Awake()
     {
-        _renderer = GetComponent<Renderer>();
+        Movement = GetComponent<PassengerMovement>();
+        _animatorController = GetComponent<PassengerAnimatorController>();
     }
 
     public void Initialize(PassengerData data)
@@ -25,14 +29,11 @@ public class Passenger : MonoBehaviour
         State = PassengerState.OnGrid;
         CanMove = false;
 
-        ApplyColor();
-    }
+        _animatorController.SetSitting(false);
 
-    private void ApplyColor()
-    {
-        if (_renderer == null) _renderer = GetComponent<Renderer>();
+        if (_renderer == null) return;
 
-        if (_renderer != null) _renderer.material.color = Color.ToUnityColor();
+        _renderer.material.color = Color.ToUnityColor();
     }
 
     private void OnMouseDown()
@@ -47,19 +48,28 @@ public class Passenger : MonoBehaviour
         CanMove = State == PassengerState.OnGrid && canMove;
     }
 
-    public void MoveToWaitingSlot(Vector3 position)
+    public void BeginMoving()
+    {
+        State = PassengerState.Moving;
+        CanMove = false;
+    }
+
+    public void ArriveAtWaitingSlot()
     {
         State = PassengerState.Waiting;
         CanMove = false;
-
-        transform.position = position;
+        transform.rotation = Quaternion.Euler(0f, 0f, 0f);
     }
 
-    public void Board()
+    public void Board(Transform seat)
     {
         State = PassengerState.Boarded;
         CanMove = false;
 
-        gameObject.SetActive(false);
+        transform.SetParent(seat, true);
+        transform.localPosition = Vector3.zero;
+        transform.localRotation = Quaternion.Euler(0f, 90f, 0f);
+
+        _animatorController.SetSitting(true);
     }
 }

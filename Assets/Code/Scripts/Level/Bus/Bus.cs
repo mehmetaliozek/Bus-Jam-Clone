@@ -1,43 +1,128 @@
+using System.Collections.Generic;
 using UnityEngine;
 
-[RequireComponent(typeof(Renderer))]
 public class Bus : MonoBehaviour
 {
     public GameColor Color { get; private set; }
-    public int PassengerCount { get; private set; }
+    public int PassengerCount => _seatedPassengers.Count;
 
     public bool IsFull => PassengerCount == GameConstants.BusCapacity;
+    public bool HasBoardingPoint => _boardingPoint != null;
+    public Vector3 BoardingPosition => _boardingPoint.position;
 
-    private Renderer _renderer;
+    [SerializeField] private Transform _boardingPoint;
+    [SerializeField] private Transform[] _seats;
+    [SerializeField] private Renderer _renderer;
 
-    private void Awake()
+    private readonly int[] _colorMaterialIndices = { 0, 1 };
+
+    private readonly Dictionary<Passenger, Transform> _seatReservations = new Dictionary<Passenger, Transform>();
+
+    private readonly HashSet<Passenger> _seatedPassengers = new HashSet<Passenger>();
+
+    private Material[] _materials;
+
+    public bool IsConfigured
     {
-        _renderer = GetComponent<Renderer>();
+        get
+        {
+            if (_boardingPoint == null) return false;
+            if (!_boardingPoint.IsChildOf(transform)) return false;
+
+            if (_seats == null || _seats.Length != GameConstants.BusCapacity)
+                return false;
+
+            for (int i = 0; i < _seats.Length; i++)
+            {
+                if (_seats[i] == null) return false;
+                if (!_seats[i].IsChildOf(transform)) return false;
+
+                for (int j = 0; j < i; j++)
+                {
+                    if (_seats[i] == _seats[j])
+                        return false;
+                }
+            }
+
+            return true;
+        }
     }
 
     public void Initialize(BusData data)
     {
         Color = data.Color;
-        PassengerCount = 0;
+
+        _seatReservations.Clear();
+        _seatedPassengers.Clear();
 
         ApplyColor();
     }
 
-    private void ApplyColor()
+    public bool TryReserveSeat(Passenger passenger, out Transform seat)
     {
-        if (_renderer == null) _renderer = GetComponent<Renderer>();
+        seat = null;
 
-        if (_renderer != null) _renderer.material.color = Color.ToUnityColor();
+        if (passenger == null || !IsConfigured) return false;
+        if (passenger.Color != Color) return false;
+        if (passenger.State == PassengerState.Boarded) return false;
+
+        if (_seatReservations.TryGetValue(passenger, out seat)) return true;
+
+        foreach (Transform candidate in _seats)
+        {
+            if (_seatReservations.ContainsValue(candidate)) continue;
+
+            _seatReservations.Add(passenger, candidate);
+            seat = candidate;
+
+            return true;
+        }
+
+        return false;
     }
 
-    public bool TryAddPassenger(Passenger passenger)
+    public bool TryCompleteSeating(Passenger passenger, Transform seat)
     {
-        if (passenger == null) return false;
-        if (passenger.State == PassengerState.Boarded) return false;
-        if (IsFull) return false;
-        if (passenger.Color != Color) return false;
+        if (passenger == null || seat == null) return false;
 
-        PassengerCount++;
-        return true;
+        if (!_seatReservations.TryGetValue(passenger, out Transform reservedSeat))
+            return false;
+
+        if (reservedSeat != seat) return false;
+
+        return _seatedPassengers.Add(passenger);
+    }
+
+    public void ReleaseSeatReservation(Passenger passenger)
+    {
+        if (passenger == null) return;
+        if (_seatedPassengers.Contains(passenger)) return;
+
+        _seatReservations.Remove(passenger);
+    }
+
+    private void ApplyColor()
+    {
+        if (_renderer == null) return;
+
+        _materials ??= _renderer.materials;
+
+        foreach (int index in _colorMaterialIndices)
+        {
+            if (index < 0 || index >= _materials.Length) continue;
+            if (_materials[index] == null) continue;
+
+            _materials[index].color = Color.ToUnityColor();
+        }
+    }
+
+    private void OnDestroy()
+    {
+        if (_materials == null) return;
+
+        foreach (Material material in _materials)
+        {
+            if (material != null) Destroy(material);
+        }
     }
 }

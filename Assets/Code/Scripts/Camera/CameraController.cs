@@ -1,5 +1,6 @@
 using UnityEngine;
 
+[ExecuteAlways]
 [RequireComponent(typeof(Camera))]
 public class CameraController : MonoBehaviour
 {

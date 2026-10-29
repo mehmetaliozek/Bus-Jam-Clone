@@ -29,6 +29,26 @@ public class WaitingSlots : MonoBehaviour
         }
     }
 
+    public bool AllPassengersArrived
+    {
+        get
+        {
+            if (_slots == null || _slots.Length == 0)
+                return false;
+
+            foreach (GridCell slot in _slots)
+            {
+                if (slot == null || slot.Passenger == null)
+                    return false;
+
+                if (slot.Passenger.State != PassengerState.Waiting)
+                    return false;
+            }
+
+            return true;
+        }
+    }
+
     public bool IsFull => _slots != null && _slots.Length > 0 && PassengerCount == _slots.Length;
 
     public bool IsEmpty => PassengerCount == 0;
@@ -78,8 +98,10 @@ public class WaitingSlots : MonoBehaviour
         return false;
     }
 
-    public bool TryAddPassengerToSlot(Passenger passenger)
+    public bool TryReserveSlot(Passenger passenger, out GridCell reservedSlot)
     {
+        reservedSlot = null;
+
         if (passenger == null || _slots == null) return false;
         if (passenger.State != PassengerState.OnGrid) return false;
         if (ContainsPassenger(passenger)) return false;
@@ -91,7 +113,7 @@ public class WaitingSlots : MonoBehaviour
             if (slot == null || slot.IsOccupied) continue;
 
             slot.SetPassenger(passenger);
-            passenger.MoveToWaitingSlot(slot.PassengerPosition);
+            reservedSlot = slot;
 
             return true;
         }
@@ -110,9 +132,13 @@ public class WaitingSlots : MonoBehaviour
             GridCell slot = _slots[i];
 
             if (slot == null || !slot.IsOccupied) continue;
-            if (slot.Passenger.Color != color) continue;
 
-            passenger = slot.Passenger;
+            Passenger candidate = slot.Passenger;
+
+            if (candidate.State != PassengerState.Waiting) continue;
+            if (candidate.Color != color) continue;
+
+            passenger = candidate;
             return true;
         }
 

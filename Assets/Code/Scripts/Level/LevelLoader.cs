@@ -53,7 +53,8 @@ public class LevelLoader : MonoBehaviour
 
         if (!_busQueue.IsConfigured)
         {
-            error = "BusQueue requires a bus prefab.";
+            error = "BusQueue requires a configured bus prefab, unique seats, a boarding point, an exit point and a non-zero queue offset.";
+
             return false;
         }
 
