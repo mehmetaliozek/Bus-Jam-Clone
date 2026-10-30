@@ -4,16 +4,22 @@ using UnityEngine;
 public class LevelManager : MonoBehaviour
 {
     public event Action<LevelState> StateChanged;
-    public event Action LevelCompleted;
-    public event Action<string> LevelFailed;
-
-    public LevelState State { get; private set; } = LevelState.None;
-
-    [SerializeField] private LevelData _levelData;
 
     [SerializeField] private LevelLoader _levelLoader;
     [SerializeField] private PassengerController _passengerController;
     [SerializeField] private LevelTimer _levelTimer;
+
+    private LevelData[] _levels = Array.Empty<LevelData>();
+    private LevelData _levelData;
+
+    private int _currentLevelIndex = -1;
+
+    public LevelState State { get; private set; } = LevelState.None;
+
+    public int CurrentLevelNumber => _levelData != null ? _levelData.LevelNumber : 0;
+
+    public bool HasNextLevel => _currentLevelIndex >= 0 && _currentLevelIndex + 1 < _levels.Length;
+
 
     private void OnEnable()
     {
@@ -31,7 +37,11 @@ public class LevelManager : MonoBehaviour
         if (State == LevelState.Playing)
         {
             _passengerController.SetInputEnabled(true);
-            _levelTimer.StartTimer();
+
+            if (State == LevelState.Playing)
+            {
+                _levelTimer.StartTimer();
+            }
         }
     }
 
@@ -54,11 +64,60 @@ public class LevelManager : MonoBehaviour
 
     private void Start()
     {
-        LoadLevel(_levelData);
+        if (!TryCollectLevels(out string error))
+        {
+            FailLevel(error);
+            return;
+        }
+
+        LoadLevel(0);
     }
 
-    public bool LoadLevel(LevelData data)
+    private bool TryCollectLevels(out string error)
     {
+        error = null;
+
+        _levels = Resources.LoadAll<LevelData>("Levels");
+
+        if (_levels.Length == 0)
+        {
+            error = "Resources/Levels içinde LevelData bulunamadı.";
+            return false;
+        }
+
+        Array.Sort(_levels, (first, second) => first.LevelNumber.CompareTo(second.LevelNumber));
+
+        for (int i = 0; i < _levels.Length; i++)
+        {
+            LevelData level = _levels[i];
+
+            if (level.LevelNumber < 1)
+            {
+                error = $"{level.name}: LevelNumber pozitif olmalı.";
+                return false;
+            }
+
+            if (i > 0 && _levels[i - 1].LevelNumber == level.LevelNumber)
+            {
+                error = $"Aynı LevelNumber birden fazla kullanılmış: {level.LevelNumber}. Asset'ler: {_levels[i - 1].name}, {level.name}";
+
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private bool LoadLevel(int index)
+    {
+        if (index < 0 || index >= _levels.Length)
+        {
+            Debug.LogError($"Geçersiz level indeksi: {index}");
+            return false;
+        }
+
+        LevelData data = _levels[index];
+
         SetState(LevelState.Loading);
 
         if (_levelLoader == null || _passengerController == null || _levelTimer == null)
@@ -77,31 +136,61 @@ public class LevelManager : MonoBehaviour
         }
 
         _levelData = data;
+        _currentLevelIndex = index;
 
-        _passengerController.Initialize(_levelLoader.GridBuilder, _levelLoader.PassengerSpawner, _levelLoader.BusQueue, _levelLoader.WaitingSlots);
+        _passengerController.Initialize(
+            _levelLoader.GridBuilder,
+            _levelLoader.PassengerSpawner,
+            _levelLoader.BusQueue,
+            _levelLoader.WaitingSlots
+        );
 
         _levelTimer.Initialize(data.TimeLimit);
 
         SetState(LevelState.Ready);
-
-        StartLevel();
 
         return true;
     }
 
     public void StartLevel()
     {
-        if (State != LevelState.Ready) return;
+        if (State != LevelState.Ready && State != LevelState.Paused)
+        {
+            return;
+        }
 
         SetState(LevelState.Playing);
 
         _passengerController.SetInputEnabled(true);
+
+        if (State != LevelState.Playing) return;
+
         _levelTimer.StartTimer();
+    }
+
+    public void PauseLevel()
+    {
+        if (State != LevelState.Playing) return;
+
+        _passengerController.SetInputEnabled(false);
+        _levelTimer.StopTimer();
+
+        SetState(LevelState.Paused);
     }
 
     public void RestartLevel()
     {
-        LoadLevel(_levelData);
+        if (_currentLevelIndex < 0) return;
+
+        LoadLevel(_currentLevelIndex);
+    }
+
+    public void NextLevel()
+    {
+        if (State != LevelState.Completed) return;
+        if (!HasNextLevel) return;
+
+        LoadLevel(_currentLevelIndex + 1);
     }
 
     private void CompleteLevel()
@@ -113,8 +202,7 @@ public class LevelManager : MonoBehaviour
 
         SetState(LevelState.Completed);
 
-        Debug.Log("Level completed.");
-        LevelCompleted?.Invoke();
+        Debug.Log($"Level {CurrentLevelNumber} completed.");
     }
 
     private void FailLevel(string reason)
@@ -138,7 +226,6 @@ public class LevelManager : MonoBehaviour
         SetState(LevelState.Failed);
 
         Debug.LogWarning(reason);
-        LevelFailed?.Invoke(reason);
     }
 
     private void HandleTimeExpired()

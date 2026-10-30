@@ -4,38 +4,39 @@ using UnityEngine;
 [RequireComponent(typeof(Camera))]
 public class CameraController : MonoBehaviour
 {
+    private const float FieldOfView = 20f;
+
     [SerializeField] private LevelManager _levelManager;
     [SerializeField] private LevelLoader _levelLoader;
-
     [SerializeField] private Transform _target;
-    [SerializeField] private Vector3 _focusOffset;
 
     [SerializeField] private float _angle = 65f;
 
     [Tooltip("Minimum camera distance.")]
     [SerializeField] private float _distance = 55f;
 
-    [Tooltip("Reserved space on each screen edge. X: left/right, Y: top/bottom.")]
-    [SerializeField]
-    private Vector2 _screenPadding = new Vector2(0.06f, 0.1f);
-
-    private const float FieldOfView = 20f;
+    private readonly Vector3[] _boundsCorners = new Vector3[8];
 
     private Camera _camera;
     private Bounds _levelBounds;
-    private bool _hasBounds;
 
-    private Vector3[] _boundsCorners = new Vector3[8];
+    private bool _hasBounds;
+    private bool _cameraDirty = true;
+
+    private float _lastAspect = -1f;
+
 
     private void OnEnable()
     {
         _camera = GetComponent<Camera>();
+        _cameraDirty = true;
 
         if (!Application.isPlaying || _levelManager == null) return;
 
         _levelManager.StateChanged += HandleLevelStateChanged;
 
-        if (_levelManager.State == LevelState.Ready || _levelManager.State == LevelState.Playing)
+        if (_levelManager.State == LevelState.Ready ||
+            _levelManager.State == LevelState.Playing)
         {
             FrameLevel();
         }
@@ -49,10 +50,21 @@ public class CameraController : MonoBehaviour
         }
 
         _hasBounds = false;
+        _cameraDirty = true;
     }
 
     private void LateUpdate()
     {
+        if (_camera == null) return;
+        if (!_hasBounds && _target == null) return;
+
+        bool aspectChanged = !Mathf.Approximately(
+            _lastAspect,
+            _camera.aspect
+        );
+
+        if (!_cameraDirty && !aspectChanged) return;
+
         UpdateCamera();
     }
 
@@ -186,8 +198,6 @@ public class CameraController : MonoBehaviour
 
         Vector3 focusPosition = _hasBounds ? _levelBounds.center : _target.position;
 
-        focusPosition += _focusOffset;
-
         Quaternion rotation = Quaternion.Euler(_angle, 0f, 0f);
 
         float distance = _distance;
@@ -201,6 +211,9 @@ public class CameraController : MonoBehaviour
         Vector3 position = focusPosition - rotation * Vector3.forward * distance;
 
         transform.SetPositionAndRotation(position, rotation);
+
+        _lastAspect = _camera.aspect;
+        _cameraDirty = false;
     }
 
     private float CalculateDistance(Vector3 focusPosition, Quaternion rotation)
@@ -211,19 +224,15 @@ public class CameraController : MonoBehaviour
 
         float horizontalTangent = verticalTangent * Mathf.Max(0.01f, _camera.aspect);
 
-        float horizontalSpace = horizontalTangent * (1f - _screenPadding.x * 2f);
-
-        float verticalSpace = verticalTangent * (1f - _screenPadding.y * 2f);
-
         float distance = _distance;
 
         for (int i = 0; i < _boundsCorners.Length; i++)
         {
             Vector3 point = inverseRotation * (_boundsCorners[i] - focusPosition);
 
-            float horizontalDistance = Mathf.Abs(point.x) / horizontalSpace - point.z;
+            float horizontalDistance = Mathf.Abs(point.x) / horizontalTangent - point.z;
 
-            float verticalDistance = Mathf.Abs(point.y) / verticalSpace - point.z;
+            float verticalDistance = Mathf.Abs(point.y) / verticalTangent - point.z;
 
             float nearClipDistance = _camera.nearClipPlane + 0.1f - point.z;
 
@@ -256,8 +265,6 @@ public class CameraController : MonoBehaviour
         _angle = Mathf.Clamp(_angle, 10f, 90f);
         _distance = Mathf.Max(1f, _distance);
 
-        _screenPadding.x = Mathf.Clamp(_screenPadding.x, 0f, 0.4f);
-
-        _screenPadding.y = Mathf.Clamp(_screenPadding.y, 0f, 0.4f);
+        _cameraDirty = true;
     }
 }

@@ -20,8 +20,6 @@ public class LevelLoader : MonoBehaviour
 
         Clear();
 
-        _waitingSlots.Initialize();
-
         _gridBuilder.Build(data.GridSize, data.GridCells);
         _passengerSpawner.Spawn(data.Passengers, _gridBuilder);
         _busQueue.Build(data.Buses);
@@ -215,14 +213,14 @@ public class LevelLoader : MonoBehaviour
 
     public void Clear()
     {
-        if (_passengerSpawner != null)
-            _passengerSpawner.Clear();
+        if (_busQueue != null)
+            _busQueue.Clear();
 
         if (_waitingSlots != null)
             _waitingSlots.Clear();
 
-        if (_busQueue != null)
-            _busQueue.Clear();
+        if (_passengerSpawner != null)
+            _passengerSpawner.Clear();
 
         if (_gridBuilder != null)
             _gridBuilder.Clear();

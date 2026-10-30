@@ -7,4 +7,7 @@ public enum GameColor
     Purple,
     Orange,
     Cyan,
+    Pink,
+    Lime,
+    Gray
 }

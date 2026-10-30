@@ -1,8 +1,6 @@
 using System.Collections.Generic;
-using Unity.VisualScripting.FullSerializer;
 using UnityEngine;
 
-[CreateAssetMenu(fileName = "LevelData", menuName = "Bus Jam/Level Data")]
 public class LevelData : ScriptableObject
 {
     public int LevelNumber = 1;

@@ -1,5 +1,18 @@
 {
   "dependencies": {
+    "com.kobapps.safeareakit": {
+      "version": "https://github.com/Kobapps/SafeAreaKit.git",
+      "depth": 0,
+      "source": "git",
+      "dependencies": {},
+      "hash": "2c074f8d3570136a077e4c060d8e6aa1251f854b"
+    },
+    "com.unity.2d.sprite": {
+      "version": "1.0.0",
+      "depth": 0,
+      "source": "builtin",
+      "dependencies": {}
+    },
     "com.unity.burst": {
       "version": "1.8.12",
       "depth": 1,

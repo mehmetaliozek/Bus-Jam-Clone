@@ -70,8 +70,8 @@ public class LevelDataEditor : Editor
         _levelData.TimeLimit = Mathf.Max(GameConstants.MinTimeLimit, timeLimit);
 
         _levelData.GridSize = new Vector2Int(
-            Mathf.Clamp(gridSize.x, 1, 15),
-            Mathf.Clamp(gridSize.y, 1, 15)
+            Mathf.Clamp(gridSize.x, 1, 10),
+            Mathf.Clamp(gridSize.y, 1, 10)
         );
 
         RemoveInvalidData();
