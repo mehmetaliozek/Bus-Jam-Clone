@@ -4,7 +4,7 @@ using UnityEngine;
 [RequireComponent(typeof(Camera))]
 public class CameraController : MonoBehaviour
 {
-    private const float FieldOfView = 20f;
+    private const float FieldOfView = 16f;
 
     [SerializeField] private LevelManager _levelManager;
     [SerializeField] private LevelLoader _levelLoader;

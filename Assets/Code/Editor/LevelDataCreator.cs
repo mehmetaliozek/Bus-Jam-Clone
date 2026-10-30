@@ -6,7 +6,7 @@ public static class LevelDataCreator
     private const string ResourcesFolder = "Assets/Resources";
     private const string LevelsFolder = ResourcesFolder + "/Levels";
 
-    [MenuItem("Assets/Create/Bus Jam/Level Data")]
+    [MenuItem("Assets/Create/Bus Jam/Level Data", false, -100)]
     private static void CreateLevelData()
     {
         if (!AssetDatabase.IsValidFolder(ResourcesFolder))

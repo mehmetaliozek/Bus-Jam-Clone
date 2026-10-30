@@ -46,7 +46,16 @@ public class PassengerController : MonoBehaviour
         _inputEnabled = false;
         _gridDirty = true;
 
-        _remainingPassengers = _passengerSpawner.Passengers.Count;
+        _remainingPassengers = 0;
+
+        foreach (Passenger passenger in _passengerSpawner.Passengers)
+        {
+            if (passenger.State != PassengerState.Boarded)
+            {
+                _remainingPassengers++;
+            }
+        }
+
         _isInitialized = true;
 
         foreach (Passenger passenger in _passengerSpawner.Passengers)
@@ -58,6 +67,75 @@ public class PassengerController : MonoBehaviour
         _busQueue.ActiveBusChanged += ResolveWaitingPassengers;
 
         RefreshPassengerMovement();
+    }
+
+    public SaveData CreateSave(int levelNumber, float remainingTime, LevelState state)
+    {
+        SaveData save = new SaveData
+        {
+            LevelNumber = levelNumber,
+            RemainingTime = remainingTime,
+            State = state
+        };
+
+        foreach (Passenger passenger in _passengerSpawner.Passengers)
+        {
+            if (passenger.State != PassengerState.OnGrid)
+                continue;
+
+            save.GridPassengers.Add(new PassengerData
+            {
+                Color = passenger.Color,
+                Coordinates = passenger.Coordinates
+            });
+        }
+
+        for (int i = 0; i < _waitingSlots.Slots.Count; i++)
+        {
+            Passenger passenger = _waitingSlots.Slots[i].Passenger;
+
+            if (passenger == null)
+                continue;
+
+            save.WaitingPassengers.Add(new WaitingPassengerSaveData
+            {
+                SlotIndex = i,
+                Color = passenger.Color
+            });
+        }
+
+        List<Bus> buses = _busQueue.GetRemainingBuses();
+
+        foreach (Bus bus in buses)
+        {
+            int passengerCount = bus.PassengerCount;
+
+            foreach (Trip trip in _trips.Values)
+            {
+                if (trip.Bus == bus)
+                {
+                    passengerCount++;
+                }
+            }
+
+            save.Buses.Add(new BusSaveData
+            {
+                Color = bus.Color,
+                PassengerCount = passengerCount
+            });
+        }
+
+        while (save.Buses.Count > 0 && save.Buses[0].PassengerCount == GameConstants.BusCapacity)
+        {
+            save.Buses.RemoveAt(0);
+        }
+
+        if (save.GridPassengers.Count == 0 && save.WaitingPassengers.Count == 0 && save.Buses.Count == 0)
+        {
+            save.State = LevelState.Completed;
+        }
+
+        return save;
     }
 
     public void SetInputEnabled(bool isEnabled)

@@ -201,6 +201,10 @@ public class BusQueue : MonoBehaviour
 
         _isTransitioning = false;
     }
+    public List<Bus> GetRemainingBuses()
+    {
+        return new List<Bus>(_busQueue);
+    }
 
     private void OnEnable()
     {

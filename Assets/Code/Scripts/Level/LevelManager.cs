@@ -14,6 +14,8 @@ public class LevelManager : MonoBehaviour
 
     private int _currentLevelIndex = -1;
 
+    private bool _hasLoadedLevel;
+
     public LevelState State { get; private set; } = LevelState.None;
 
     public int CurrentLevelNumber => _levelData != null ? _levelData.LevelNumber : 0;
@@ -70,6 +72,26 @@ public class LevelManager : MonoBehaviour
             return;
         }
 
+        if (SaveManager.TryLoad(out SaveData save))
+        {
+            int index = Array.FindIndex(_levels, level => level.LevelNumber == save.LevelNumber);
+
+            if (index >= 0)
+            {
+                if (save.RestartOnLoad)
+                {
+                    LoadLevel(index);
+                    return;
+                }
+
+                if (LoadLevel(index, save)) return;
+
+                Debug.LogWarning("Save could not be applied. Reloading the level.");
+                LoadLevel(index);
+                return;
+            }
+        }
+
         LoadLevel(0);
     }
 
@@ -108,13 +130,15 @@ public class LevelManager : MonoBehaviour
         return true;
     }
 
-    private bool LoadLevel(int index)
+    private bool LoadLevel(int index, SaveData save = null)
     {
         if (index < 0 || index >= _levels.Length)
         {
-            Debug.LogError($"Geçersiz level indeksi: {index}");
+            Debug.LogError($"Invalid level index: {index}");
             return false;
         }
+
+        _hasLoadedLevel = false;
 
         LevelData data = _levels[index];
 
@@ -129,7 +153,10 @@ public class LevelManager : MonoBehaviour
         _passengerController.Clear();
         _levelTimer.StopTimer();
 
-        if (!_levelLoader.TryLoad(data, out string error))
+
+        bool loaded = save == null ? _levelLoader.TryLoad(data, out string error) : _levelLoader.TryLoadSave(data, save, out error);
+
+        if (!loaded)
         {
             FailLevel(error);
             return false;
@@ -145,9 +172,26 @@ public class LevelManager : MonoBehaviour
             _levelLoader.WaitingSlots
         );
 
-        _levelTimer.Initialize(data.TimeLimit);
+        _levelTimer.Initialize(save == null ? data.TimeLimit : save.RemainingTime);
 
-        SetState(LevelState.Ready);
+        _hasLoadedLevel = true;
+
+        if (save == null || save.State == LevelState.Ready)
+        {
+            SetState(LevelState.Ready);
+        }
+        else if (save.State == LevelState.Completed)
+        {
+            SetState(LevelState.Completed);
+        }
+        else if (save.RemainingTime <= 0f)
+        {
+            FailLevel("Time is up.");
+        }
+        else
+        {
+            SetState(LevelState.Ready);
+        }
 
         return true;
     }
@@ -241,5 +285,48 @@ public class LevelManager : MonoBehaviour
 
         State = state;
         StateChanged?.Invoke(State);
+    }
+
+    private void SaveCurrentGame()
+    {
+        if (!_hasLoadedLevel || _levelData == null)
+            return;
+
+        if (State == LevelState.None || State == LevelState.Loading)
+            return;
+
+        if (State == LevelState.Failed)
+        {
+            SaveManager.Save(new SaveData
+            {
+                LevelNumber = CurrentLevelNumber,
+                State = LevelState.Failed,
+                RestartOnLoad = true
+            });
+
+            return;
+        }
+
+        SaveData save = _passengerController.CreateSave(
+            CurrentLevelNumber,
+            _levelTimer.RemainingTime,
+            State
+        );
+
+        SaveManager.Save(save);
+    }
+
+    private void OnApplicationPause(bool paused)
+    {
+        if (!paused) return;
+
+        PauseLevel();
+        SaveCurrentGame();
+    }
+
+    private void OnApplicationQuit()
+    {
+        PauseLevel();
+        SaveCurrentGame();
     }
 }

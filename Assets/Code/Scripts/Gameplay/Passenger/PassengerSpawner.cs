@@ -53,6 +53,23 @@ public class PassengerSpawner : MonoBehaviour
         }
     }
 
+    public Passenger SpawnAt(GameColor color, Vector3 position)
+    {
+        EnsurePool();
+
+        Passenger passenger = _pool.Get(
+            transform,
+            position,
+            Quaternion.identity
+        );
+
+        passenger.Initialize(new PassengerData { Color = color, Coordinates = Vector2Int.zero });
+
+        _passengers.Add(passenger);
+
+        return passenger;
+    }
+
     public void Clear()
     {
         foreach (Passenger passenger in _passengers)

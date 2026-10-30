@@ -967,8 +967,8 @@ Camera:
     width: 1
     height: 1
   near clip plane: 0.3
-  far clip plane: 1000
-  field of view: 20
+  far clip plane: 100
+  field of view: 16
   orthographic: 0
   orthographic size: 15
   m_Depth: -1
@@ -2627,8 +2627,8 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 10}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
+  m_LocalScale: {x: 0.90000004, y: 0.90000004, z: 0.90000004}
+  m_ConstrainProportionsScale: 1
   m_Children:
   - {fileID: 1013433740}
   m_Father: {fileID: 1963252601}
@@ -2648,7 +2648,7 @@ MonoBehaviour:
   _busPrefab: {fileID: 3429561098665101383, guid: d9be385118ff8a143a1e8b6637bfe18b,
     type: 3}
   _exitPoint: {fileID: 1013433740}
-  _queueOffset: {x: -8, y: 0, z: 0}
+  _queueOffset: {x: -7.5, y: 0, z: 0}
   _departureDelay: 0.2
   _departureDuration: 0.9
   _arrivalDuration: 0.8
@@ -3707,7 +3707,7 @@ RectTransform:
   m_Father: {fileID: 1023036968}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 1, y: 0.98046875}
+  m_AnchorMax: {x: 1, y: 0.97117877}
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}

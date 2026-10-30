@@ -27,6 +27,65 @@ public class LevelLoader : MonoBehaviour
         return true;
     }
 
+    public bool TryLoadSave(LevelData level, SaveData save, out string error)
+    {
+        if (!ValidateScene(out error)) return false;
+
+        if (!ValidateData(level, out error)) return false;
+
+        if (!ValidateSave(level, save, out error)) return false;
+
+        Clear();
+
+        _gridBuilder.Build(level.GridSize, level.GridCells);
+
+        _passengerSpawner.Spawn(save.GridPassengers, _gridBuilder);
+
+        foreach (WaitingPassengerSaveData saved in save.WaitingPassengers)
+        {
+            GridCell slot = _waitingSlots.Slots[saved.SlotIndex];
+
+            Passenger passenger = _passengerSpawner.SpawnAt(saved.Color, slot.PassengerPosition);
+
+            slot.SetPassenger(passenger);
+            passenger.ArriveAtWaitingSlot();
+        }
+
+        List<BusData> busData = new();
+
+        foreach (BusSaveData saved in save.Buses)
+        {
+            busData.Add(new BusData { Color = saved.Color });
+        }
+
+        _busQueue.Build(busData);
+
+        List<Bus> buses = _busQueue.GetRemainingBuses();
+
+        for (int i = 0; i < buses.Count; i++)
+        {
+            Bus bus = buses[i];
+            int passengerCount = save.Buses[i].PassengerCount;
+
+            for (int j = 0; j < passengerCount; j++)
+            {
+                Passenger passenger = _passengerSpawner.SpawnAt(bus.Color, bus.BoardingPosition);
+
+                if (!bus.TryReserveSeat(passenger, out Transform seat) || !bus.TryCompleteSeating(passenger, seat))
+                {
+                    error = "The passenger could not be placed in the seat while the save was loading.";
+                    Clear();
+                    return false;
+                }
+
+                passenger.Board(seat);
+            }
+        }
+
+        error = null;
+        return true;
+    }
+
     private bool ValidateScene(out string error)
     {
         error = null;
@@ -197,6 +256,66 @@ public class LevelLoader : MonoBehaviour
             }
         }
 
+        return true;
+    }
+
+    private bool ValidateSave(LevelData level, SaveData save, out string error)
+    {
+        error = "The save data is invalid for this level.";
+
+        if (save.LevelNumber != level.LevelNumber || float.IsNaN(save.RemainingTime) || float.IsInfinity(save.RemainingTime) || save.RemainingTime < 0f || save.GridPassengers == null || save.WaitingPassengers == null || save.Buses == null)
+        {
+            return false;
+        }
+
+        HashSet<Vector2Int> validCells = new();
+
+        foreach (GridCellData cell in level.GridCells)
+        {
+            validCells.Add(cell.Coordinates);
+        }
+
+        HashSet<Vector2Int> occupiedCells = new();
+        HashSet<int> occupiedSlots = new();
+
+        Dictionary<GameColor, int> balance = new();
+
+        foreach (BusSaveData bus in save.Buses)
+        {
+            if (bus == null || bus.PassengerCount < 0 || bus.PassengerCount >= GameConstants.BusCapacity)
+            {
+                return false;
+            }
+
+            AddCount(balance, bus.Color, GameConstants.BusCapacity - bus.PassengerCount);
+        }
+
+        foreach (PassengerData passenger in save.GridPassengers)
+        {
+            if (passenger == null || !validCells.Contains(passenger.Coordinates) || !occupiedCells.Add(passenger.Coordinates))
+            {
+                return false;
+            }
+
+            AddCount(balance, passenger.Color, -1);
+        }
+
+        foreach (WaitingPassengerSaveData passenger in save.WaitingPassengers)
+        {
+            if (passenger == null || passenger.SlotIndex < 0 || passenger.SlotIndex >= _waitingSlots.Slots.Count || !occupiedSlots.Add(passenger.SlotIndex))
+            {
+                return false;
+            }
+
+            AddCount(balance, passenger.Color, -1);
+        }
+
+        foreach (int value in balance.Values)
+        {
+            if (value != 0) return false;
+        }
+
+        error = null;
         return true;
     }
 

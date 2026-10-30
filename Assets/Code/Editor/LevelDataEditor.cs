@@ -323,7 +323,7 @@ public class LevelDataEditor : Editor
             headerHeight = 0f,
             footerHeight = 0f,
 
-            elementHeight = EditorGUIUtility.singleLineHeight * 4f + 34f,
+            elementHeight = EditorGUIUtility.singleLineHeight * 4f + 10f,
 
             drawElementCallback = DrawBusElement
         };
@@ -357,12 +357,6 @@ public class LevelDataEditor : Editor
         EditorGUIUtility.labelWidth = Mathf.Min(80f, rect.width * 0.4f);
 
         EditorGUI.PropertyField(rect, color, new GUIContent("Color"));
-
-        rect.y += lineHeight + spacing;
-
-        EditorGUI.LabelField(rect, $"Capacity: {GameConstants.BusCapacity}");
-
-        EditorGUIUtility.labelWidth = previousLabelWidth;
 
         rect.y += lineHeight + spacing;
 
