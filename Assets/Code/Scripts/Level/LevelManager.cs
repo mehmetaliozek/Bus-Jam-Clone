@@ -9,6 +9,7 @@ public class LevelManager : MonoBehaviour
     [SerializeField] private PassengerController _passengerController;
     [SerializeField] private LevelTimer _levelTimer;
     [SerializeField] private SoundManager _soundManager;
+    [SerializeField] private VibrationManager _vibrationManager;
 
     private LevelData[] _levels = Array.Empty<LevelData>();
     private LevelData _levelData;
@@ -78,6 +79,11 @@ public class LevelManager : MonoBehaviour
             if (_soundManager != null)
             {
                 _soundManager.SetSoundEnabled(save.IsSoundEnabled);
+            }
+
+            if (_vibrationManager != null)
+            {
+                _vibrationManager.SetVibrationEnabled(save.IsVibrationEnabled);
             }
 
             int index = Array.FindIndex(_levels, level => level.LevelNumber == save.LevelNumber);
@@ -308,7 +314,8 @@ public class LevelManager : MonoBehaviour
                 LevelNumber = CurrentLevelNumber,
                 State = LevelState.Failed,
                 RestartOnLoad = true,
-                IsSoundEnabled = _soundManager.IsSoundEnabled
+                IsSoundEnabled = _soundManager.IsSoundEnabled,
+                IsVibrationEnabled = _vibrationManager.IsVibrationEnabled
             });
 
             return;
@@ -320,6 +327,8 @@ public class LevelManager : MonoBehaviour
             State,
             _soundManager.IsSoundEnabled
         );
+
+        save.IsVibrationEnabled = _vibrationManager.IsVibrationEnabled;
 
         SaveManager.Save(save);
     }

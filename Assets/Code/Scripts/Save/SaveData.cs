@@ -8,7 +8,7 @@ public class SaveData
     public float RemainingTime;
     public LevelState State;
     public bool IsSoundEnabled = true;
-
+    public bool IsVibrationEnabled = true;
     public bool RestartOnLoad;
 
     public List<PassengerData> GridPassengers = new();

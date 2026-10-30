@@ -14,6 +14,7 @@ public class PassengerController : MonoBehaviour
     public event Action LevelCompleted;
     public event Action<string> LevelFailed;
     public event Action PassengerMoveStarted;
+    public event Action PassengerBoarded;
 
     [SerializeField] private Transform _walkway;
 
@@ -339,6 +340,8 @@ public class PassengerController : MonoBehaviour
 
         _trips.Remove(passenger);
         _remainingPassengers--;
+
+        PassengerBoarded?.Invoke();
 
         _busQueue.AdvanceIfFull();
 

@@ -7,6 +7,7 @@ public class UIManager : MonoBehaviour
     [SerializeField] private LevelManager _levelManager;
     [SerializeField] private LevelTimer _levelTimer;
     [SerializeField] private SoundManager _soundManager;
+    [SerializeField] private VibrationManager _vibrationManager;
 
     [Header("Buttons")]
     [SerializeField] private GameObject _startButton;
@@ -41,6 +42,13 @@ public class UIManager : MonoBehaviour
             HandleSoundEnabledChanged(_soundManager.IsSoundEnabled);
         }
 
+        if (_vibrationManager != null)
+        {
+            _vibrationManager.VibrationEnabledChanged += HandleVibrationEnabledChanged;
+
+            HandleVibrationEnabledChanged(_vibrationManager.IsVibrationEnabled);
+        }
+
         Refresh();
     }
 
@@ -59,6 +67,11 @@ public class UIManager : MonoBehaviour
         if (_soundManager != null)
         {
             _soundManager.SoundEnabledChanged -= HandleSoundEnabledChanged;
+        }
+
+        if (_vibrationManager != null)
+        {
+            _vibrationManager.VibrationEnabledChanged -= HandleVibrationEnabledChanged;
         }
     }
 
@@ -82,7 +95,7 @@ public class UIManager : MonoBehaviour
             _levelText.SetText("Level {0}", _levelManager.CurrentLevelNumber);
         }
 
-        if(_startButton != null)
+        if (_startButton != null)
         {
             _startButton.SetActive(state == LevelState.Ready);
         }
@@ -97,7 +110,8 @@ public class UIManager : MonoBehaviour
             _winPanel.SetActive(state == LevelState.Completed);
         }
 
-        if (_failPanel != null) {
+        if (_failPanel != null)
+        {
             _failPanel.SetActive(state == LevelState.Failed);
         }
     }
@@ -119,6 +133,14 @@ public class UIManager : MonoBehaviour
         if (_soundDisable != null)
         {
             _soundDisable.SetActive(!isEnabled);
+        }
+    }
+
+    private void HandleVibrationEnabledChanged(bool isEnabled)
+    {
+        if (_vibrationDisable != null)
+        {
+            _vibrationDisable.SetActive(!isEnabled);
         }
     }
 
@@ -146,13 +168,20 @@ public class UIManager : MonoBehaviour
         _levelManager.NextLevel();
     }
 
-    public void HandleSoundClicked(GameObject child){
-        child.SetActive(!child.activeSelf);
+    public void HandleSoundClicked()
+    {
+        if (_soundManager == null)
+            return;
+
+        _soundManager.SetSoundEnabled();
     }
 
-    public void HandleVibrateClicked(GameObject child)
+    public void HandleVibrateClicked()
     {
-        child.SetActive(!child.activeSelf);
+        if (_vibrationManager == null)
+            return;
+
+        _vibrationManager.SetVibrationEnabled();
     }
 
     public void HandleExitClicked()
