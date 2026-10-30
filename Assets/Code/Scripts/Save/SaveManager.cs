@@ -30,7 +30,8 @@ public static class SaveManager
         try
         {
             string json = File.ReadAllText(SavePath);
-            SaveData loaded = JsonUtility.FromJson<SaveData>(json);
+            SaveData loaded = new SaveData();
+            JsonUtility.FromJsonOverwrite(json, loaded);
 
             if (loaded == null || loaded.LevelNumber < 1 || loaded.GridPassengers == null || loaded.WaitingPassengers == null || loaded.Buses == null)
             {

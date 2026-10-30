@@ -5,8 +5,8 @@ using UnityEngine;
 
 public class BusQueue : MonoBehaviour
 {
-
     public event Action ActiveBusChanged;
+    public event Action BusDepartureStarted;
 
     [SerializeField] private Bus _busPrefab;
     [SerializeField] private Transform _exitPoint;
@@ -98,6 +98,13 @@ public class BusQueue : MonoBehaviour
         _transition = sequence;
 
         sequence.AppendInterval(_departureDelay);
+
+        sequence.AppendCallback(() =>
+        {
+            if (version != _version) return;
+
+            BusDepartureStarted?.Invoke();
+        });
 
         sequence.Append(departingBus.transform.DOMove(_exitPoint.position, Mathf.Max(0.1f, _departureDuration)).SetEase(Ease.InQuad));
 

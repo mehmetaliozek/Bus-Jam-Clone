@@ -13,6 +13,7 @@ public class PassengerController : MonoBehaviour
 
     public event Action LevelCompleted;
     public event Action<string> LevelFailed;
+    public event Action PassengerMoveStarted;
 
     [SerializeField] private Transform _walkway;
 
@@ -69,13 +70,14 @@ public class PassengerController : MonoBehaviour
         RefreshPassengerMovement();
     }
 
-    public SaveData CreateSave(int levelNumber, float remainingTime, LevelState state)
+    public SaveData CreateSave(int levelNumber, float remainingTime, LevelState state, bool isSoundEnabled)
     {
         SaveData save = new SaveData
         {
             LevelNumber = levelNumber,
             RemainingTime = remainingTime,
-            State = state
+            State = state,
+            IsSoundEnabled = isSoundEnabled
         };
 
         foreach (Passenger passenger in _passengerSpawner.Passengers)
@@ -207,7 +209,10 @@ public class PassengerController : MonoBehaviour
 
         UpdateReachabilityIfNeeded();
 
-        if (!_gridPathfinder.TryGetPath(passenger, _gridBuilder, out List<Vector3> route)) return;
+        if (!_gridPathfinder.TryGetPath(passenger, _gridBuilder, out List<Vector3> route))
+        {
+            return;
+        }
 
         Bus bus = _busQueue.ActiveBus;
 
@@ -222,12 +227,16 @@ public class PassengerController : MonoBehaviour
             AppendDestination(route, bus.BoardingPosition);
 
             StartTrip(passenger, new Trip { Bus = bus }, route);
+
+            PassengerMoveStarted?.Invoke();
         }
         else if (_waitingSlots.TryReserveSlot(passenger, out GridCell slot))
         {
             AppendDestination(route, slot.PassengerPosition);
 
             StartTrip(passenger, new Trip { Slot = slot }, route);
+
+            PassengerMoveStarted?.Invoke();
         }
 
         RefreshPassengerMovement();

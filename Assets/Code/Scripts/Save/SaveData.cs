@@ -7,6 +7,7 @@ public class SaveData
     public int LevelNumber;
     public float RemainingTime;
     public LevelState State;
+    public bool IsSoundEnabled = true;
 
     public bool RestartOnLoad;
 

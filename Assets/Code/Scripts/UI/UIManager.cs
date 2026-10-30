@@ -6,9 +6,12 @@ public class UIManager : MonoBehaviour
     [Header("References")]
     [SerializeField] private LevelManager _levelManager;
     [SerializeField] private LevelTimer _levelTimer;
+    [SerializeField] private SoundManager _soundManager;
 
     [Header("Buttons")]
     [SerializeField] private GameObject _startButton;
+    [SerializeField] private GameObject _soundDisable;
+    [SerializeField] private GameObject _vibrationDisable;
 
     [Header("Texts")]
     [SerializeField] private TMP_Text _levelText;
@@ -31,6 +34,13 @@ public class UIManager : MonoBehaviour
             _levelTimer.TimeChanged += HandleTimeChanged;
         }
 
+        if (_soundManager != null)
+        {
+            _soundManager.SoundEnabledChanged += HandleSoundEnabledChanged;
+
+            HandleSoundEnabledChanged(_soundManager.IsSoundEnabled);
+        }
+
         Refresh();
     }
 
@@ -44,6 +54,11 @@ public class UIManager : MonoBehaviour
         if (_levelTimer != null)
         {
             _levelTimer.TimeChanged -= HandleTimeChanged;
+        }
+
+        if (_soundManager != null)
+        {
+            _soundManager.SoundEnabledChanged -= HandleSoundEnabledChanged;
         }
     }
 
@@ -99,6 +114,14 @@ public class UIManager : MonoBehaviour
         _timerText.text = $"{minutes:00}:{seconds:00}";
     }
 
+    private void HandleSoundEnabledChanged(bool isEnabled)
+    {
+        if (_soundDisable != null)
+        {
+            _soundDisable.SetActive(!isEnabled);
+        }
+    }
+
     public void HandleStartClicked()
     {
         if (_levelManager == null) return;
@@ -121,6 +144,15 @@ public class UIManager : MonoBehaviour
     {
         if (_levelManager == null) return;
         _levelManager.NextLevel();
+    }
+
+    public void HandleSoundClicked(GameObject child){
+        child.SetActive(!child.activeSelf);
+    }
+
+    public void HandleVibrateClicked(GameObject child)
+    {
+        child.SetActive(!child.activeSelf);
     }
 
     public void HandleExitClicked()
