@@ -352,8 +352,6 @@ public class LevelDataEditor : Editor
 
         rect.y += lineHeight + spacing;
 
-        float previousLabelWidth = EditorGUIUtility.labelWidth;
-
         EditorGUIUtility.labelWidth = Mathf.Min(80f, rect.width * 0.4f);
 
         EditorGUI.PropertyField(rect, color, new GUIContent("Color"));

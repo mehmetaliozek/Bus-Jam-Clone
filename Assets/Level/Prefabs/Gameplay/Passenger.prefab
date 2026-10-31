@@ -666,7 +666,6 @@ GameObject:
   - component: {fileID: 3305501481636071388}
   - component: {fileID: 3288411216038378327}
   - component: {fileID: -5290666506225619205}
-  - component: {fileID: 4138540087278294969}
   m_Layer: 0
   m_Name: Passenger
   m_TagString: Untagged
@@ -748,6 +747,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _renderer: {fileID: 4528812574583756579}
+  _outlineMaterial: {fileID: 2100000, guid: 22390e8f83a81854f89f202c570245f8, type: 2}
 --- !u!114 &3288411216038378327
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -777,20 +777,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _animator: {fileID: 6378207671594616785}
---- !u!114 &4138540087278294969
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7190392360658972332}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 80987528803ca144f92685160731fdeb, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  _sourceRenderer: {fileID: 4528812574583756579}
-  _outlineMaterial: {fileID: 2100000, guid: 22390e8f83a81854f89f202c570245f8, type: 2}
 --- !u!1 &7193394844209572896
 GameObject:
   m_ObjectHideFlags: 0
