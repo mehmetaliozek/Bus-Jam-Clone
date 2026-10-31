@@ -5281,6 +5281,12 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _cellPrefab: {fileID: 4245291852319970859, guid: c91301f1f2934b24e84e0fc6545836ed,
     type: 3}
+  _hedgePrefab: {fileID: 7830481699584223062, guid: 47dfa04edb754a342986b39fe36d253b,
+    type: 3}
+  _curvedHedgePrefab: {fileID: 2204256689057081903, guid: 3054ab6e4c022c14da844a7eb9427059,
+    type: 3}
+  _pillarPrefab: {fileID: 8240295640724037764, guid: d4d83528eecd4f7498b9279837bcbb19,
+    type: 3}
   _cellSpacing: 1.1
 --- !u!4 &1353718892
 Transform:

@@ -37,9 +37,9 @@ MonoBehaviour:
   Buses:
   - Color: 7
   - Color: 6
-  - Color: 9
   - Color: 3
   - Color: 2
+  - Color: 9
   - Color: 1
   Passengers:
   - Color: 3
@@ -68,13 +68,13 @@ MonoBehaviour:
     Coordinates: {x: 0, y: 3}
   - Color: 1
     Coordinates: {x: 4, y: 3}
+  - Color: 1
+    Coordinates: {x: 2, y: 3}
+  - Color: 3
+    Coordinates: {x: 3, y: 0}
   - Color: 2
     Coordinates: {x: 1, y: 3}
   - Color: 2
     Coordinates: {x: 5, y: 3}
-  - Color: 1
-    Coordinates: {x: 2, y: 3}
   - Color: 2
     Coordinates: {x: 6, y: 3}
-  - Color: 3
-    Coordinates: {x: 3, y: 0}

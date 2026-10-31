@@ -2,8 +2,8 @@ Shader "BusJam/PassengerOutline"
 {
     Properties
     {
-        _OutlineColor ("Outline Color", Color) = (1, 1, 1, 1)
-        _OutlineWidth ("Outline Width", Range(0, 0.1)) = 0.02
+        _OutlineColor ("Outline Color", Color) = (0, 0, 0, 1)
+        _OutlineWidth ("Outline Width", Range(0, 0.1)) = 0.015
     }
 
     SubShader
@@ -12,7 +12,7 @@ Shader "BusJam/PassengerOutline"
         {
             "RenderPipeline" = "UniversalPipeline"
             "RenderType" = "Opaque"
-            "Queue" = "Geometry+1"
+            "Queue" = "Geometry+100"
         }
 
         Pass
@@ -25,7 +25,7 @@ Shader "BusJam/PassengerOutline"
             }
 
             Cull Front
-            ZWrite Off
+            ZWrite On
             ZTest LEqual
 
             HLSLPROGRAM
@@ -56,7 +56,6 @@ Shader "BusJam/PassengerOutline"
                 Varyings output;
 
                 float3 positionWS = TransformObjectToWorld(input.positionOS.xyz);
-
                 float3 normalWS = TransformObjectToWorldNormal(input.normalOS);
 
                 positionWS += normalWS * _OutlineWidth;

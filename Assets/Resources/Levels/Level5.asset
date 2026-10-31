@@ -31,10 +31,10 @@ MonoBehaviour:
   - Coordinates: {x: 3, y: 2}
   - Coordinates: {x: 5, y: 2}
   Buses:
-  - Color: 7
   - Color: 1
-  - Color: 9
   - Color: 3
+  - Color: 7
+  - Color: 9
   Passengers:
   - Color: 9
     Coordinates: {x: 1, y: 2}

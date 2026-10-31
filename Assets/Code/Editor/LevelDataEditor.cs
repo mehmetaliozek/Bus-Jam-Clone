@@ -1,4 +1,4 @@
-using System;
+using System.Collections.Generic;
 using UnityEditor;
 using UnityEditorInternal;
 using UnityEngine;
@@ -11,17 +11,38 @@ public class LevelDataEditor : Editor
     private Vector2 _gridScrollPosition;
     private Vector2 _passengerScrollPosition;
 
+    private SerializedProperty _busesProperty;
     private ReorderableList _busList;
     private int _busRemoveIndex = -1;
+
+    private readonly HashSet<Vector2Int> _activeCellLookup = new HashSet<Vector2Int>();
+    private readonly Dictionary<Vector2Int, PassengerData> _passengerLookup = new Dictionary<Vector2Int, PassengerData>();
+
+    private static readonly GUIContent ColorLabel = new GUIContent("Color");
+    private static readonly GUIContent RemovePassengerContent = new GUIContent("Remove Passenger");
+    private static readonly GUIContent[] ColorMenuContents = CreateColorMenuContents();
 
     private const float CellSize = 30f;
     private const float CellSpacing = 3f;
     private const float MaxGridHeight = 240f;
     private const float ScrollbarSize = 18f;
 
+    private static GUIContent[] CreateColorMenuContents()
+    {
+        GameColor[] colors = LevelEditorWindow.AllColors;
+        GUIContent[] contents = new GUIContent[colors.Length];
+        for (int i = 0; i < colors.Length; i++)
+        {
+            contents[i] = new GUIContent(colors[i].ToString());
+        }
+        return contents;
+    }
+
     private void OnEnable()
     {
         _levelData = (LevelData)target;
+        EnsureLevelDataLists();
+        _busesProperty = serializedObject.FindProperty("Buses");
         Undo.undoRedoPerformed += Repaint;
     }
 
@@ -32,6 +53,19 @@ public class LevelDataEditor : Editor
 
     public override void OnInspectorGUI()
     {
+        EnsureLevelDataLists();
+        RebuildLookupCache();
+
+        Color prevBg = GUI.backgroundColor;
+        GUI.backgroundColor = new Color(0.25f, 0.75f, 1f, 1f);
+        if (GUILayout.Button("🎨 Open in Level Editor Window", GUILayout.Height(30f)))
+        {
+            LevelEditorWindow.OpenWithLevel(_levelData);
+        }
+        GUI.backgroundColor = prevBg;
+
+        EditorGUILayout.Space(5f);
+
         DrawLevelSettings();
 
         EditorGUILayout.Space();
@@ -44,6 +78,42 @@ public class LevelDataEditor : Editor
 
         EditorGUILayout.Space();
         DrawBuses();
+    }
+
+    private void EnsureLevelDataLists()
+    {
+        if (_levelData == null) return;
+        if (_levelData.GridCells == null) _levelData.GridCells = new List<GridCellData>();
+        if (_levelData.Passengers == null) _levelData.Passengers = new List<PassengerData>();
+        if (_levelData.Buses == null) _levelData.Buses = new List<BusData>();
+    }
+
+    private void RebuildLookupCache()
+    {
+        _activeCellLookup.Clear();
+        _passengerLookup.Clear();
+
+        if (_levelData == null) return;
+
+        List<GridCellData> cells = _levelData.GridCells;
+        for (int i = 0; i < cells.Count; i++)
+        {
+            GridCellData cell = cells[i];
+            if (cell != null)
+            {
+                _activeCellLookup.Add(cell.Coordinates);
+            }
+        }
+
+        List<PassengerData> passengers = _levelData.Passengers;
+        for (int i = 0; i < passengers.Count; i++)
+        {
+            PassengerData passenger = passengers[i];
+            if (passenger != null)
+            {
+                _passengerLookup[passenger.Coordinates] = passenger;
+            }
+        }
     }
 
     private void DrawLevelSettings()
@@ -75,6 +145,7 @@ public class LevelDataEditor : Editor
         );
 
         RemoveInvalidData();
+        RebuildLookupCache();
         MarkDataChanged();
     }
 
@@ -183,7 +254,10 @@ public class LevelDataEditor : Editor
 
     private bool DrawCell(Rect rect, Color color)
     {
-        EditorGUI.DrawRect(rect, color);
+        if (Event.current.type == EventType.Repaint)
+        {
+            EditorGUI.DrawRect(rect, color);
+        }
 
         return GUI.Button(rect, GUIContent.none, GUIStyle.none);
     }
@@ -194,9 +268,25 @@ public class LevelDataEditor : Editor
 
         if (IsCellActive(coordinates))
         {
-            _levelData.GridCells.RemoveAll(cell => cell.Coordinates == coordinates);
+            List<GridCellData> cells = _levelData.GridCells;
+            for (int i = cells.Count - 1; i >= 0; i--)
+            {
+                if (cells[i].Coordinates == coordinates)
+                {
+                    cells.RemoveAt(i);
+                }
+            }
+            _activeCellLookup.Remove(coordinates);
 
-            _levelData.Passengers.RemoveAll(passenger => passenger.Coordinates == coordinates);
+            List<PassengerData> passengers = _levelData.Passengers;
+            for (int i = passengers.Count - 1; i >= 0; i--)
+            {
+                if (passengers[i].Coordinates == coordinates)
+                {
+                    passengers.RemoveAt(i);
+                }
+            }
+            _passengerLookup.Remove(coordinates);
         }
         else
         {
@@ -204,6 +294,7 @@ public class LevelDataEditor : Editor
             {
                 Coordinates = coordinates
             });
+            _activeCellLookup.Add(coordinates);
         }
 
         MarkDataChanged();
@@ -214,22 +305,24 @@ public class LevelDataEditor : Editor
         GenericMenu menu = new GenericMenu();
         PassengerData passenger = GetPassenger(coordinates);
 
-        foreach (GameColor color in Enum.GetValues(typeof(GameColor)))
+        GameColor[] allColors = LevelEditorWindow.AllColors;
+        for (int i = 0; i < allColors.Length; i++)
         {
+            GameColor color = allColors[i];
             bool isSelected = passenger != null && passenger.Color == color;
 
-            menu.AddItem(new GUIContent(color.ToString()), isSelected, () => SetPassenger(coordinates, color));
+            menu.AddItem(ColorMenuContents[i], isSelected, () => SetPassenger(coordinates, color));
         }
 
         menu.AddSeparator("");
 
         if (passenger != null)
         {
-            menu.AddItem(new GUIContent("Remove Passenger"), false, () => RemovePassenger(coordinates));
+            menu.AddItem(RemovePassengerContent, false, () => RemovePassenger(coordinates));
         }
         else
         {
-            menu.AddDisabledItem(new GUIContent("Remove Passenger"));
+            menu.AddDisabledItem(RemovePassengerContent);
         }
 
         menu.ShowAsContext();
@@ -247,11 +340,13 @@ public class LevelDataEditor : Editor
 
         if (passenger == null)
         {
-            _levelData.Passengers.Add(new PassengerData
+            passenger = new PassengerData
             {
                 Coordinates = coordinates,
                 Color = color
-            });
+            };
+            _levelData.Passengers.Add(passenger);
+            _passengerLookup[coordinates] = passenger;
         }
         else
         {
@@ -267,7 +362,15 @@ public class LevelDataEditor : Editor
 
         Undo.RecordObject(_levelData, "Remove Passenger");
 
-        _levelData.Passengers.RemoveAll(passenger => passenger.Coordinates == coordinates);
+        List<PassengerData> passengers = _levelData.Passengers;
+        for (int i = passengers.Count - 1; i >= 0; i--)
+        {
+            if (passengers[i].Coordinates == coordinates)
+            {
+                passengers.RemoveAt(i);
+            }
+        }
+        _passengerLookup.Remove(coordinates);
 
         MarkDataChanged();
     }
@@ -276,20 +379,23 @@ public class LevelDataEditor : Editor
     {
         serializedObject.Update();
 
-        SerializedProperty buses = serializedObject.FindProperty("Buses");
+        if (_busesProperty == null)
+        {
+            _busesProperty = serializedObject.FindProperty("Buses");
+        }
 
         if (_busList == null)
         {
-            CreateBusList(buses);
+            CreateBusList(_busesProperty);
         }
 
-        buses.isExpanded = EditorGUILayout.Foldout(buses.isExpanded, $"Buses ({buses.arraySize})", true);
+        _busesProperty.isExpanded = EditorGUILayout.Foldout(_busesProperty.isExpanded, $"Buses ({_busesProperty.arraySize})", true);
 
-        if (buses.isExpanded)
+        if (_busesProperty.isExpanded)
         {
             EditorGUILayout.Space(3f);
 
-            if (buses.arraySize == 0)
+            if (_busesProperty.arraySize == 0)
             {
                 EditorGUILayout.LabelField("No buses added.", EditorStyles.miniLabel);
             }
@@ -300,16 +406,16 @@ public class LevelDataEditor : Editor
 
             if (_busRemoveIndex >= 0)
             {
-                buses.DeleteArrayElementAtIndex(_busRemoveIndex);
+                _busesProperty.DeleteArrayElementAtIndex(_busRemoveIndex);
 
-                _busList.index = Mathf.Clamp(_busList.index, -1, buses.arraySize - 1);
+                _busList.index = Mathf.Clamp(_busList.index, -1, _busesProperty.arraySize - 1);
 
                 _busRemoveIndex = -1;
             }
 
             if (GUILayout.Button("Add Bus", GUILayout.Height(26f)))
             {
-                AddBus(buses);
+                AddBus(_busesProperty);
             }
         }
 
@@ -343,7 +449,10 @@ public class LevelDataEditor : Editor
 
         Rect colorRect = new Rect(rect.x, rect.y, rect.width, 4f);
 
-        EditorGUI.DrawRect(colorRect, ((GameColor)color.intValue).ToUnityColor());
+        if (Event.current.type == EventType.Repaint)
+        {
+            EditorGUI.DrawRect(colorRect, ((GameColor)color.intValue).ToUnityColor());
+        }
 
         rect.y += 9f;
         rect.height = lineHeight;
@@ -352,9 +461,12 @@ public class LevelDataEditor : Editor
 
         rect.y += lineHeight + spacing;
 
+        float prevLabelWidth = EditorGUIUtility.labelWidth;
         EditorGUIUtility.labelWidth = Mathf.Min(80f, rect.width * 0.4f);
 
-        EditorGUI.PropertyField(rect, color, new GUIContent("Color"));
+        EditorGUI.PropertyField(rect, color, ColorLabel);
+
+        EditorGUIUtility.labelWidth = prevLabelWidth;
 
         rect.y += lineHeight + spacing;
 
@@ -381,12 +493,13 @@ public class LevelDataEditor : Editor
 
     private bool IsCellActive(Vector2Int coordinates)
     {
-        return _levelData.GridCells.Exists(cell => cell.Coordinates == coordinates);
+        return _activeCellLookup.Contains(coordinates);
     }
 
     private PassengerData GetPassenger(Vector2Int coordinates)
     {
-        return _levelData.Passengers.Find(passenger => passenger.Coordinates == coordinates);
+        _passengerLookup.TryGetValue(coordinates, out PassengerData passenger);
+        return passenger;
     }
 
     private bool IsInsideGrid(Vector2Int coordinates)
@@ -396,9 +509,30 @@ public class LevelDataEditor : Editor
 
     private void RemoveInvalidData()
     {
-        _levelData.GridCells.RemoveAll(cell => !IsInsideGrid(cell.Coordinates));
+        _activeCellLookup.Clear();
+        List<GridCellData> cells = _levelData.GridCells;
+        for (int i = cells.Count - 1; i >= 0; i--)
+        {
+            Vector2Int coord = cells[i].Coordinates;
+            if (!IsInsideGrid(coord))
+            {
+                cells.RemoveAt(i);
+            }
+            else
+            {
+                _activeCellLookup.Add(coord);
+            }
+        }
 
-        _levelData.Passengers.RemoveAll(passenger => !IsInsideGrid(passenger.Coordinates) || !IsCellActive(passenger.Coordinates));
+        List<PassengerData> passengers = _levelData.Passengers;
+        for (int i = passengers.Count - 1; i >= 0; i--)
+        {
+            Vector2Int coord = passengers[i].Coordinates;
+            if (!IsInsideGrid(coord) || !_activeCellLookup.Contains(coord))
+            {
+                passengers.RemoveAt(i);
+            }
+        }
     }
 
     private void MarkDataChanged()
