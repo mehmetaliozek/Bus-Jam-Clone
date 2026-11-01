@@ -117,5 +117,6 @@ public class UIManager : MonoBehaviour
     public void HandleNextLevelClicked() => GameEvents.TriggerRequestNextLevel();
     public void HandleSoundClicked() => GameEvents.TriggerRequestToggleSound();
     public void HandleVibrateClicked() => GameEvents.TriggerRequestToggleVibration();
+    public void HandleButtonClicked() => GameEvents.TriggerButtonClicked();
     public void HandleExitClicked() => Application.Quit();
 }

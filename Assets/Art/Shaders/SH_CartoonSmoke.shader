@@ -36,6 +36,7 @@ Shader "BusJam/CartoonSmoke"
             ZTest LEqual
 
             HLSLPROGRAM
+            #pragma target 3.0
             #pragma vertex Vert
             #pragma fragment Frag
             #pragma multi_compile_instancing
@@ -121,6 +122,7 @@ Shader "BusJam/CartoonSmoke"
             ZTest LEqual
 
             HLSLPROGRAM
+            #pragma target 3.0
             #pragma vertex VertOutline
             #pragma fragment FragOutline
             #pragma multi_compile_instancing

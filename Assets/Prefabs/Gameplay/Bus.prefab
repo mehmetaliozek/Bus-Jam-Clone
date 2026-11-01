@@ -711,6 +711,7 @@ MonoBehaviour:
   - {fileID: 2242293402189302751}
   _renderer: {fileID: 583053140367245229}
   _exhaustSmoke: {fileID: 9123456789012345672}
+  _smokeMesh: {fileID: 4300000, guid: b4a2e5d89f1345c290123456789abcde, type: 3}
 --- !u!1 &8540829903706476472
 GameObject:
   m_ObjectHideFlags: 0
@@ -5673,7 +5674,7 @@ ParticleSystemRenderer:
   m_VertexStreams: 0001030405
   m_UseCustomTrailVertexStreams: 0
   m_TrailVertexStreams: 00010304
-  m_Mesh: {fileID: 10207, guid: 0000000000000000e000000000000000, type: 0}
+  m_Mesh: {fileID: 4300000, guid: b4a2e5d89f1345c290123456789abcde, type: 3}
   m_Mesh1: {fileID: 0}
   m_Mesh2: {fileID: 0}
   m_Mesh3: {fileID: 0}

@@ -1064,7 +1064,7 @@ Transform:
   m_GameObject: {fileID: 330585543}
   serializedVersion: 2
   m_LocalRotation: {x: 0.46174863, y: -0, z: -0, w: 0.8870109}
-  m_LocalPosition: {x: 0, y: 53.26488, z: -32}
+  m_LocalPosition: {x: 0, y: 53.26488, z: -34.78247}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -1653,6 +1653,18 @@ MonoBehaviour:
       - m_Target: {fileID: 1023036969}
         m_TargetAssemblyTypeName: UIManager, Assembly-CSharp
         m_MethodName: HandleSoundClicked
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
+      - m_Target: {fileID: 1023036969}
+        m_TargetAssemblyTypeName: UIManager, Assembly-CSharp
+        m_MethodName: HandleButtonClicked
         m_Mode: 1
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
@@ -2414,6 +2426,18 @@ MonoBehaviour:
           m_StringArgument: 
           m_BoolArgument: 0
         m_CallState: 2
+      - m_Target: {fileID: 1023036969}
+        m_TargetAssemblyTypeName: UIManager, Assembly-CSharp
+        m_MethodName: HandleButtonClicked
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
 --- !u!114 &605884902
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2627,6 +2651,18 @@ MonoBehaviour:
           m_StringArgument: 
           m_BoolArgument: 0
         m_CallState: 2
+      - m_Target: {fileID: 1023036969}
+        m_TargetAssemblyTypeName: UIManager, Assembly-CSharp
+        m_MethodName: HandleButtonClicked
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
 --- !u!114 &649886536
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2751,6 +2787,18 @@ MonoBehaviour:
       - m_Target: {fileID: 1023036969}
         m_TargetAssemblyTypeName: UIManager, Assembly-CSharp
         m_MethodName: HandleExitClicked
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
+      - m_Target: {fileID: 1023036969}
+        m_TargetAssemblyTypeName: UIManager, Assembly-CSharp
+        m_MethodName: HandleButtonClicked
         m_Mode: 1
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
@@ -2948,7 +2996,7 @@ GameObject:
   - component: {fileID: 742337969}
   - component: {fileID: 742337970}
   m_Layer: 0
-  m_Name: SoundManager
+  m_Name: AudioManager
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -3077,12 +3125,14 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5b093fc556359c046b9a5de015a483df, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _levelReadyClip: {fileID: 8300000, guid: 2fee792bf75edf4448643969951d0ae4, type: 3}
-  _passengerMoveClip: {fileID: 8300000, guid: 493dc61fe620fc148abc54df370d9d28, type: 3}
-  _busDepartureClip: {fileID: 8300000, guid: 718b86f556f313840a2f3f1b4c614944, type: 3}
+  _levelReadyClip: {fileID: 8300000, guid: 96ab4aa6d184cd841a08408dd8d16275, type: 3}
+  _passengerMoveClip: {fileID: 8300000, guid: 8914e6b2126e5cf46aa5618e3c83ed23, type: 3}
+  _busDepartureClip: {fileID: 8300000, guid: 6e34ec75b2204e54b9862d6aa5c9e102, type: 3}
+  _buttonClickClip: {fileID: 8300000, guid: e6220f8b47222f84aae6362852860815, type: 3}
   _levelReadyVolume: 0.3
   _passengerMoveVolume: 0.75
   _busDepartureVolume: 0.5
+  _buttonClickVolume: 1
 --- !u!4 &764064397 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 1314699199724755859, guid: 27bc5e58eddf5bc4f8697cc77f5f6118,
@@ -4388,6 +4438,18 @@ MonoBehaviour:
           m_StringArgument: 
           m_BoolArgument: 0
         m_CallState: 2
+      - m_Target: {fileID: 1023036969}
+        m_TargetAssemblyTypeName: UIManager, Assembly-CSharp
+        m_MethodName: HandleButtonClicked
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
 --- !u!114 &1121970636
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4637,6 +4699,18 @@ MonoBehaviour:
           m_StringArgument: 
           m_BoolArgument: 0
         m_CallState: 2
+      - m_Target: {fileID: 1023036969}
+        m_TargetAssemblyTypeName: UIManager, Assembly-CSharp
+        m_MethodName: HandleButtonClicked
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
 --- !u!114 &1213138574
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4767,6 +4841,18 @@ MonoBehaviour:
       - m_Target: {fileID: 1023036969}
         m_TargetAssemblyTypeName: UIManager, Assembly-CSharp
         m_MethodName: HandleNextLevelClicked
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
+      - m_Target: {fileID: 1023036969}
+        m_TargetAssemblyTypeName: UIManager, Assembly-CSharp
+        m_MethodName: HandleButtonClicked
         m_Mode: 1
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
@@ -5080,6 +5166,18 @@ MonoBehaviour:
       - m_Target: {fileID: 1023036969}
         m_TargetAssemblyTypeName: UIManager, Assembly-CSharp
         m_MethodName: HandlePauseClicked
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
+      - m_Target: {fileID: 1023036969}
+        m_TargetAssemblyTypeName: UIManager, Assembly-CSharp
+        m_MethodName: HandleButtonClicked
         m_Mode: 1
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
@@ -5439,6 +5537,18 @@ MonoBehaviour:
       - m_Target: {fileID: 1023036969}
         m_TargetAssemblyTypeName: UIManager, Assembly-CSharp
         m_MethodName: HandleVibrateClicked
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
+      - m_Target: {fileID: 1023036969}
+        m_TargetAssemblyTypeName: UIManager, Assembly-CSharp
+        m_MethodName: HandleButtonClicked
         m_Mode: 1
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
@@ -8397,6 +8507,18 @@ MonoBehaviour:
       - m_Target: {fileID: 1023036969}
         m_TargetAssemblyTypeName: UIManager, Assembly-CSharp
         m_MethodName: HandleExitClicked
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
+      - m_Target: {fileID: 1023036969}
+        m_TargetAssemblyTypeName: UIManager, Assembly-CSharp
+        m_MethodName: HandleButtonClicked
         m_Mode: 1
         m_Arguments:
           m_ObjectArgument: {fileID: 0}

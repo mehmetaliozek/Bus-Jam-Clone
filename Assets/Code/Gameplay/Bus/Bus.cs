@@ -12,6 +12,7 @@ public class Bus : MonoBehaviour
     [SerializeField] private Transform[] _seats;
     [SerializeField] private Renderer _renderer;
     [SerializeField] private ParticleSystem _exhaustSmoke;
+    [SerializeField] private Mesh _smokeMesh;
 
     private readonly int[] _colorMaterialIndices = { 0, 1 };
     private readonly Dictionary<Passenger, Transform> _seatReservations = new();
@@ -263,7 +264,14 @@ public class Bus : MonoBehaviour
         if (_exhaustSmoke.TryGetComponent(out ParticleSystemRenderer psRenderer))
         {
             psRenderer.renderMode = ParticleSystemRenderMode.Mesh;
-            psRenderer.mesh = GetOrCreateLowPolySphereMesh();
+            if (_smokeMesh != null)
+            {
+                psRenderer.mesh = _smokeMesh;
+            }
+            else if (psRenderer.mesh == null)
+            {
+                psRenderer.mesh = GetOrCreateLowPolySphereMesh();
+            }
             psRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
             psRenderer.receiveShadows = false;
             psRenderer.motionVectorGenerationMode = MotionVectorGenerationMode.ForceNoMotion;
@@ -363,7 +371,7 @@ public class Bus : MonoBehaviour
             triangles = triangles
         };
         _sharedSmokeMesh.RecalculateBounds();
-        _sharedSmokeMesh.UploadMeshData(markNoLongerReadable: true);
+        _sharedSmokeMesh.UploadMeshData(markNoLongerReadable: false);
 
         return _sharedSmokeMesh;
     }

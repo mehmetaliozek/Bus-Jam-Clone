@@ -30,6 +30,7 @@ public static class GameEvents
     public static event Action RequestNextLevel;
     public static event Action RequestToggleSound;
     public static event Action RequestToggleVibration;
+    public static event Action ButtonClicked;
 
     // Triggers - Level Lifecycle
     public static void TriggerLevelLoaded(LevelDataSO level, float timeLimit, LevelState state) => LevelLoaded?.Invoke(level, timeLimit, state);
@@ -59,4 +60,5 @@ public static class GameEvents
     public static void TriggerRequestNextLevel() => RequestNextLevel?.Invoke();
     public static void TriggerRequestToggleSound() => RequestToggleSound?.Invoke();
     public static void TriggerRequestToggleVibration() => RequestToggleVibration?.Invoke();
+    public static void TriggerButtonClicked() => ButtonClicked?.Invoke();
 }
