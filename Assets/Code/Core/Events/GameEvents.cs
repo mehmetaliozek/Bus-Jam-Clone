@@ -3,7 +3,7 @@ using System;
 public static class GameEvents
 {
     // Level Lifecycle Events
-    public static event Action<LevelData, float, LevelState> LevelLoaded;
+    public static event Action<LevelDataSO, float, LevelState> LevelLoaded;
     public static event Action<LevelState> LevelStateChanged;
     public static event Action<int> LevelNumberChanged;
     public static event Action LevelCompleted;
@@ -32,7 +32,7 @@ public static class GameEvents
     public static event Action RequestToggleVibration;
 
     // Triggers - Level Lifecycle
-    public static void TriggerLevelLoaded(LevelData level, float timeLimit, LevelState state) => LevelLoaded?.Invoke(level, timeLimit, state);
+    public static void TriggerLevelLoaded(LevelDataSO level, float timeLimit, LevelState state) => LevelLoaded?.Invoke(level, timeLimit, state);
     public static void TriggerLevelStateChanged(LevelState state) => LevelStateChanged?.Invoke(state);
     public static void TriggerLevelNumberChanged(int levelNumber) => LevelNumberChanged?.Invoke(levelNumber);
     public static void TriggerLevelCompleted() => LevelCompleted?.Invoke();

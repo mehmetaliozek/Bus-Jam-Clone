@@ -17,7 +17,7 @@ public class LevelTimer : MonoBehaviour
         GameEvents.LevelStateChanged -= HandleLevelStateChanged;
     }
 
-    private void HandleLevelLoaded(LevelData data, float timeLimit, LevelState state)
+    private void HandleLevelLoaded(LevelDataSO data, float timeLimit, LevelState state)
     {
         Initialize(timeLimit);
     }

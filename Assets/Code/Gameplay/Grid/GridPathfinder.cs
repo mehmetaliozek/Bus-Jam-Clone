@@ -40,8 +40,7 @@ public class GridPathfinder
     public bool CanReachExit(Passenger passenger, GridBuilder gridBuilder)
     {
         if (passenger == null || gridBuilder == null || passenger.State != PassengerState.OnGrid) return false;
-        return gridBuilder.TryGetCell(passenger.Coordinates, out GridCell cell) &&
-               cell.Passenger == passenger && _reachableCells.Contains(passenger.Coordinates);
+        return gridBuilder.TryGetCell(passenger.Coordinates, out GridCell cell) && cell.Passenger == passenger && _reachableCells.Contains(passenger.Coordinates);
     }
 
     public bool TryGetPath(Passenger passenger, GridBuilder gridBuilder, out List<Vector3> path)

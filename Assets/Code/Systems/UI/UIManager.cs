@@ -13,11 +13,18 @@ public class UIManager : MonoBehaviour
     [SerializeField] private TMP_Text _timerText;
 
     [Header("Panels")]
-    [SerializeField] private GameObject _pausePanel;
-    [SerializeField] private GameObject _winPanel;
-    [SerializeField] private GameObject _failPanel;
+    [SerializeField] private UIPanelAnimator _pausePanel;
+    [SerializeField] private UIPanelAnimator _winPanel;
+    [SerializeField] private UIPanelAnimator _failPanel;
 
     private int _lastDisplayedSeconds = -1;
+
+    private void Awake()
+    {
+        SetPanelActive(_pausePanel, false, immediate: true);
+        SetPanelActive(_winPanel, false, immediate: true);
+        SetPanelActive(_failPanel, false, immediate: true);
+    }
 
     private void OnEnable()
     {
@@ -54,19 +61,23 @@ public class UIManager : MonoBehaviour
             _startButton.SetActive(state == LevelState.Ready);
         }
 
-        if (_pausePanel != null)
-        {
-            _pausePanel.SetActive(state == LevelState.Paused);
-        }
+        SetPanelActive(_pausePanel, state == LevelState.Paused);
+        SetPanelActive(_winPanel, state == LevelState.Completed);
+        SetPanelActive(_failPanel, state == LevelState.Failed);
+    }
 
-        if (_winPanel != null)
+    private void SetPanelActive(UIPanelAnimator animator, bool active, bool immediate = false)
+    {
+        if (animator != null)
         {
-            _winPanel.SetActive(state == LevelState.Completed);
-        }
-
-        if (_failPanel != null)
-        {
-            _failPanel.SetActive(state == LevelState.Failed);
+            if (active)
+            {
+                animator.Show();
+            }
+            else
+            {
+                animator.Hide(immediate: immediate);
+            }
         }
     }
 

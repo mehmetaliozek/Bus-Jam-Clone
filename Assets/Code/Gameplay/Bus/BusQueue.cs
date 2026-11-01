@@ -101,6 +101,7 @@ public class BusQueue : MonoBehaviour
         {
             if (version != _version) return;
 
+            departingBus.PlayExhaust(isDeparture: true);
             GameEvents.TriggerBusDepartureStarted();
         });
 
@@ -135,6 +136,19 @@ public class BusQueue : MonoBehaviour
         Sequence sequence = DOTween.Sequence();
         _transition = sequence;
 
+        sequence.InsertCallback(0f, () =>
+        {
+            if (version != _version) return;
+
+            foreach (Bus queuedBus in _busQueue)
+            {
+                if (queuedBus != null)
+                {
+                    queuedBus.PlayExhaust(isDeparture: false);
+                }
+            }
+        });
+
         int index = 0;
 
         foreach (Bus bus in _busQueue)
@@ -149,6 +163,14 @@ public class BusQueue : MonoBehaviour
         sequence.OnComplete(() =>
         {
             if (version != _version) return;
+
+            foreach (Bus queuedBus in _busQueue)
+            {
+                if (queuedBus != null)
+                {
+                    queuedBus.StopExhaust(clearImmediate: false);
+                }
+            }
 
             FinishTransition();
         });
@@ -174,13 +196,22 @@ public class BusQueue : MonoBehaviour
     {
         if (_transition == null || !_transition.IsActive()) return;
 
-        if (_paused || !isActiveAndEnabled)
+        bool shouldPause = _paused || !isActiveAndEnabled;
+        if (shouldPause)
         {
             _transition.Pause();
         }
         else
         {
             _transition.Play();
+        }
+
+        foreach (Bus bus in _busQueue)
+        {
+            if (bus != null)
+            {
+                bus.SetExhaustPaused(shouldPause);
+            }
         }
     }
 
@@ -193,6 +224,14 @@ public class BusQueue : MonoBehaviour
         _transition = null;
 
         transition?.Kill(false);
+
+        foreach (Bus bus in _busQueue)
+        {
+            if (bus != null)
+            {
+                bus.StopExhaust(clearImmediate: true);
+            }
+        }
     }
 
     public void Clear()
@@ -220,7 +259,9 @@ public class BusQueue : MonoBehaviour
 
     private void OnDestroy()
     {
-        Clear();
+        StopTransition();
+        _busQueue.Clear();
+        _isTransitioning = false;
         _pool?.Dispose();
     }
 }

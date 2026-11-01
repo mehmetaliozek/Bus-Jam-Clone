@@ -58,7 +58,6 @@ public class PassengerMovement : MonoBehaviour
         Vector3 direction = transform.position - _previousPosition;
         _previousPosition = transform.position;
 
-        // Y eksenini sıfırlayarak yolcunun öne/arkaya/yana eğilmesini engeller, dimdik tutar.
         direction.y = 0f;
 
         if (direction.sqrMagnitude < 0.000001f) return;

@@ -101,7 +101,7 @@ public class CameraController : MonoBehaviour
 
         foreach (var r in target.GetComponentsInChildren<Renderer>())
         {
-            if (!r.enabled || !r.gameObject.activeInHierarchy) continue;
+            if (!r.enabled || !r.gameObject.activeInHierarchy || r is ParticleSystemRenderer) continue;
             AddBounds(r.bounds);
             found = true;
         }

@@ -1,0 +1,29 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3ed5742a13c811643a0632219de7aa4f, type: 3}
+  m_Name: MysteryPassengerType
+  m_EditorClassIdentifier: 
+  _displayName: Mystery
+  _editorShortTag: '?'
+  _editorTagColor: {r: 0.85, g: 0.55, b: 1, a: 1}
+  _seatRequirement: 1
+  _prefabOverride: {fileID: 0}
+  _accessoryPrefab: {fileID: 0}
+  _accessoryLocalPosition: {x: 0, y: 2, z: 0}
+  _scaleMultiplier: 1
+  _hasCustomParameter: 0
+  _parameterLabel: Value
+  _defaultParameter: 1
+  _minParameter: 1
+  _maxParameter: 99
+  _hiddenColor: {r: 0.1764706, g: 0.21568628, b: 0.28235295, a: 1}
+  _mysterySymbol: '?'

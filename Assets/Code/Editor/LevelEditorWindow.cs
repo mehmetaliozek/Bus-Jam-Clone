@@ -2,11 +2,13 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using UnityEditor;
+using UnityEditorInternal;
 using UnityEngine;
 
 public class LevelEditorWindow : EditorWindow
 {
     private const string LevelsDirectory = "Assets/Resources/Levels";
+    private const string PassengerTypesDirectory = "Assets/Resources/PassengerTypes";
 
     private const float MinWindowWidth = 900f;
     private const float MinWindowHeight = 520f;
@@ -17,8 +19,9 @@ public class LevelEditorWindow : EditorWindow
     public static readonly GameColor[] AllColors = (GameColor[])Enum.GetValues(typeof(GameColor));
     private static readonly System.Random s_Rng = new System.Random();
 
-    private readonly List<LevelData> _allLevels = new List<LevelData>();
-    private LevelData _selectedLevel;
+    private readonly List<LevelDataSO> _allLevels = new List<LevelDataSO>();
+    private readonly List<PassengerTypeSO> _passengerTypes = new List<PassengerTypeSO>();
+    private LevelDataSO _selectedLevel;
     private Vector2 _levelsScrollPos;
     private Vector2 _gridScrollPos;
     private Vector2 _rightPanelScrollPos;
@@ -27,6 +30,7 @@ public class LevelEditorWindow : EditorWindow
     private readonly HashSet<Vector2Int> _activeCellLookup = new HashSet<Vector2Int>();
     private readonly Dictionary<Vector2Int, PassengerData> _passengerLookup = new Dictionary<Vector2Int, PassengerData>();
     private readonly int[] _passengerCountsByColor = new int[AllColors.Length];
+    private readonly int[] _passengerSeatDemandByColor = new int[AllColors.Length];
     private readonly int[] _busCountsByColor = new int[AllColors.Length];
     private readonly List<GameColor> _activeBalanceColors = new List<GameColor>(AllColors.Length);
     private int _selectedToolIndex = 0;
@@ -38,6 +42,9 @@ public class LevelEditorWindow : EditorWindow
     };
 
     private GameColor _activeColor = GameColor.Red;
+    private PassengerTypeSO _activePassengerType;
+    private int _activeTypeParameter = 1;
+    private bool _isTypePaintMode;
 
     private Vector2Int _lastInteractedCoord = new Vector2Int(-1, -1);
     private bool _isDragging;
@@ -148,6 +155,23 @@ public class LevelEditorWindow : EditorWindow
         }
     }
 
+    private GUIStyle _cellBadgeStyle;
+    private GUIStyle CellBadgeStyle
+    {
+        get
+        {
+            if (_cellBadgeStyle == null)
+            {
+                _cellBadgeStyle = new GUIStyle(EditorStyles.miniBoldLabel)
+                {
+                    alignment = TextAnchor.MiddleCenter,
+                    fontSize = 10
+                };
+            }
+            return _cellBadgeStyle;
+        }
+    }
+
     private GUIStyle _rightStatusStyle;
     private GUIStyle RightStatusStyle
     {
@@ -165,14 +189,14 @@ public class LevelEditorWindow : EditorWindow
         }
     }
 
-    private LevelData _levelToDelete;
+    private LevelDataSO _levelToDelete;
     private int _busToRemove = -1;
-    private int _busToMoveUp = -1;
-    private int _busToMoveDown = -1;
     private bool _shouldAddBus;
     private bool _shouldClearBuses;
     private bool _shouldAutoBuses;
     private bool _shouldShuffleBuses;
+    private ReorderableList _busReorderableList;
+    private LevelDataSO _busListBoundLevel;
 
     [MenuItem("Tools/Bus Jam/Level Editor")]
     [MenuItem("Window/Bus Jam/Level Editor")]
@@ -183,7 +207,7 @@ public class LevelEditorWindow : EditorWindow
         window.Show();
     }
 
-    public static void OpenWithLevel(LevelData level)
+    public static void OpenWithLevel(LevelDataSO level)
     {
         LevelEditorWindow window = GetWindow<LevelEditorWindow>("Level Editor");
         window.minSize = new Vector2(MinWindowWidth, MinWindowHeight);
@@ -194,6 +218,7 @@ public class LevelEditorWindow : EditorWindow
     private void OnEnable()
     {
         minSize = new Vector2(MinWindowWidth, MinWindowHeight);
+        RefreshPassengerTypes();
         RefreshLevelList();
         Undo.undoRedoPerformed += OnUndoRedo;
     }
@@ -205,6 +230,7 @@ public class LevelEditorWindow : EditorWindow
 
     private void OnProjectChange()
     {
+        RefreshPassengerTypes();
         RefreshLevelList();
         Repaint();
     }
@@ -262,6 +288,7 @@ public class LevelEditorWindow : EditorWindow
         _activeCellLookup.Clear();
         _passengerLookup.Clear();
         Array.Clear(_passengerCountsByColor, 0, _passengerCountsByColor.Length);
+        Array.Clear(_passengerSeatDemandByColor, 0, _passengerSeatDemandByColor.Length);
         Array.Clear(_busCountsByColor, 0, _busCountsByColor.Length);
         _activeBalanceColors.Clear();
 
@@ -290,6 +317,7 @@ public class LevelEditorWindow : EditorWindow
                 if (colorIndex >= 0 && colorIndex < _passengerCountsByColor.Length)
                 {
                     _passengerCountsByColor[colorIndex]++;
+                    _passengerSeatDemandByColor[colorIndex] += p.SeatRequirement;
                 }
             }
         }
@@ -356,24 +384,6 @@ public class LevelEditorWindow : EditorWindow
             ShuffleBuses();
         }
 
-        if (_busToMoveUp >= 1 && _busToMoveUp < _selectedLevel.Buses.Count)
-        {
-            Undo.RecordObject(_selectedLevel, "Move Bus Up");
-            BusData bus = _selectedLevel.Buses[_busToMoveUp];
-            _selectedLevel.Buses.RemoveAt(_busToMoveUp);
-            _selectedLevel.Buses.Insert(_busToMoveUp - 1, bus);
-            MarkSelectedDirty();
-        }
-
-        if (_busToMoveDown >= 0 && _busToMoveDown < _selectedLevel.Buses.Count - 1)
-        {
-            Undo.RecordObject(_selectedLevel, "Move Bus Down");
-            BusData bus = _selectedLevel.Buses[_busToMoveDown];
-            _selectedLevel.Buses.RemoveAt(_busToMoveDown);
-            _selectedLevel.Buses.Insert(_busToMoveDown + 1, bus);
-            MarkSelectedDirty();
-        }
-
         if (_busToRemove >= 0 && _busToRemove < _selectedLevel.Buses.Count)
         {
             Undo.RecordObject(_selectedLevel, "Remove Bus");
@@ -386,8 +396,6 @@ public class LevelEditorWindow : EditorWindow
 
     private void ResetDeferredBusFlags()
     {
-        _busToMoveUp = -1;
-        _busToMoveDown = -1;
         _busToRemove = -1;
         _shouldAddBus = false;
         _shouldClearBuses = false;
@@ -395,7 +403,7 @@ public class LevelEditorWindow : EditorWindow
         _shouldShuffleBuses = false;
     }
 
-    private void EnsureLevelDataLists(LevelData level)
+    private void EnsureLevelDataLists(LevelDataSO level)
     {
         if (level == null) return;
         if (level.GridCells == null) level.GridCells = new List<GridCellData>();
@@ -407,7 +415,7 @@ public class LevelEditorWindow : EditorWindow
     {
         EditorGUILayout.BeginHorizontal(EditorStyles.toolbar);
 
-        GUILayout.Label("🚌 Level Editor Studio", TitleStyle);
+        GUILayout.Label("Level Editor Studio", TitleStyle);
 
         GUILayout.FlexibleSpace();
 
@@ -472,7 +480,7 @@ public class LevelEditorWindow : EditorWindow
         _searchFilter = EditorGUILayout.TextField(_searchFilter, EditorStyles.toolbarSearchField, GUILayout.ExpandWidth(true));
         if (!string.IsNullOrEmpty(_searchFilter))
         {
-            if (GUILayout.Button("✕", EditorStyles.toolbarButton, GUILayout.Width(18f)))
+            if (GUILayout.Button("X", EditorStyles.toolbarButton, GUILayout.Width(18f)))
             {
                 _searchFilter = string.Empty;
                 GUI.FocusControl(null);
@@ -498,7 +506,7 @@ public class LevelEditorWindow : EditorWindow
 
         for (int i = 0; i < _allLevels.Count; i++)
         {
-            LevelData level = _allLevels[i];
+            LevelDataSO level = _allLevels[i];
             if (level == null) continue;
 
             if (hasSearch &&
@@ -647,9 +655,100 @@ public class LevelEditorWindow : EditorWindow
 
         EditorGUILayout.EndHorizontal();
 
+        EditorGUILayout.Space(5f);
+        extraVerticalRows += DrawPassengerTypeRow(labelColWidth);
+
         EditorGUILayout.EndVertical();
 
         return extraVerticalRows;
+    }
+
+    private int DrawPassengerTypeRow(float labelColWidth)
+    {
+        int addedRows = 1;
+        EditorGUILayout.BeginHorizontal();
+        GUILayout.Label("Type:", CenterLabelStyle, GUILayout.Width(labelColWidth), GUILayout.Height(ToolbarItemHeight));
+
+        DrawTypeOptionButton(null, "Normal", new Color(0.55f, 0.62f, 0.72f, 1f));
+
+        for (int i = 0; i < _passengerTypes.Count; i++)
+        {
+            PassengerTypeSO type = _passengerTypes[i];
+            if (type == null) continue;
+
+            GUILayout.Space(4f);
+            string btnLabel = $"{type.DisplayName} [{type.EditorShortTag}]";
+            DrawTypeOptionButton(type, btnLabel, type.EditorTagColor);
+        }
+
+        if (_isTypePaintMode && _activePassengerType != null && _activePassengerType.HasCustomParameter)
+        {
+            GUILayout.Space(10f);
+            GUILayout.Label($"{_activePassengerType.ParameterLabel}:", CenterLabelStyle, GUILayout.ExpandWidth(false), GUILayout.Height(ToolbarItemHeight));
+            int newVal = EditorGUILayout.IntField(_activeTypeParameter, GUILayout.Width(42f), GUILayout.Height(ToolbarItemHeight - 2f));
+            _activeTypeParameter = _activePassengerType.ClampParameter(newVal);
+        }
+
+        GUILayout.FlexibleSpace();
+        EditorGUILayout.EndHorizontal();
+
+        return addedRows;
+    }
+
+    private void DrawTypeOptionButton(PassengerTypeSO type, string labelText, Color accentColor)
+    {
+        bool isSelected = _selectedToolIndex == 0 && _isTypePaintMode && _activePassengerType == type;
+        GUIContent content = new GUIContent(labelText);
+        float calcWidth = Mathf.Max(68f, ColorBtnLabelStyle.CalcSize(content).x + 18f);
+
+        Rect rawRect = GUILayoutUtility.GetRect(calcWidth, ToolbarItemHeight, GUIStyle.none, GUILayout.Width(calcWidth), GUILayout.Height(ToolbarItemHeight));
+        Rect rect = new Rect(
+            Mathf.Round(rawRect.x),
+            Mathf.Round(rawRect.y + 1f),
+            Mathf.Round(rawRect.width),
+            Mathf.Round(rawRect.height)
+        );
+
+        EditorGUIUtility.AddCursorRect(rect, MouseCursor.Link);
+
+        if (Event.current.type == EventType.Repaint)
+        {
+            Texture2D whiteTex = EditorGUIUtility.whiteTexture;
+
+            if (isSelected)
+            {
+                GUI.DrawTexture(rect, whiteTex, ScaleMode.StretchToFill, true, 0f, Color.white, 0f, 5f);
+                Rect innerRect = new Rect(rect.x + 2f, rect.y + 2f, rect.width - 4f, rect.height - 4f);
+                Color selectedBg = Color.Lerp(accentColor, new Color(0.15f, 0.17f, 0.22f, 1f), 0.35f);
+                GUI.DrawTexture(innerRect, whiteTex, ScaleMode.StretchToFill, true, 0f, selectedBg, 0f, 3.5f);
+            }
+            else
+            {
+                Color matteBg = new Color(0.18f, 0.19f, 0.22f, 1f);
+                Color fillColor = Color.Lerp(matteBg, accentColor, 0.25f);
+                Color borderColor = new Color(0.08f, 0.08f, 0.10f, 0.65f);
+
+                GUI.DrawTexture(rect, whiteTex, ScaleMode.StretchToFill, true, 0f, borderColor, 0f, 5f);
+                Rect innerRect = new Rect(rect.x + 1f, rect.y + 1f, rect.width - 2f, rect.height - 2f);
+                GUI.DrawTexture(innerRect, whiteTex, ScaleMode.StretchToFill, true, 0f, fillColor, 0f, 4f);
+            }
+        }
+
+        GUIStyle style = ColorBtnLabelStyle;
+        style.normal.textColor = isSelected ? Color.white : new Color(0.92f, 0.92f, 0.95f, 0.92f);
+        GUI.Label(rect, labelText, style);
+
+        if (GUI.Button(rect, GUIContent.none, GUIStyle.none))
+        {
+            _activePassengerType = type;
+            _isTypePaintMode = true;
+            if (type != null && type.HasCustomParameter)
+            {
+                _activeTypeParameter = type.ClampParameter(_activeTypeParameter);
+            }
+            _selectedToolIndex = 0;
+            Repaint();
+        }
     }
 
     private void DrawBatchActionButtons(bool expandToFit)
@@ -704,7 +803,7 @@ public class LevelEditorWindow : EditorWindow
 
     private void DrawColorButton(GameColor color, string labelText, float btnWidth)
     {
-        bool isSelected = _selectedToolIndex == 0 && _activeColor == color;
+        bool isSelected = _selectedToolIndex == 0 && !_isTypePaintMode && _activeColor == color;
         Color unityColor = color.ToUnityColor();
 
         Rect rawRect = GUILayoutUtility.GetRect(btnWidth, ToolbarItemHeight, GUIStyle.none, GUILayout.Width(btnWidth), GUILayout.Height(ToolbarItemHeight));
@@ -750,6 +849,7 @@ public class LevelEditorWindow : EditorWindow
         if (GUI.Button(rect, GUIContent.none, GUIStyle.none))
         {
             _activeColor = color;
+            _isTypePaintMode = false;
             _selectedToolIndex = 0;
             Repaint();
         }
@@ -764,7 +864,7 @@ public class LevelEditorWindow : EditorWindow
             return;
         }
 
-        EditorGUILayout.HelpBox("Sol Tık: Uygula / Boya | Sağ Tık: Sil | Basılı Tutarak Sürükle: Çoklu Boyama", MessageType.None);
+        EditorGUILayout.HelpBox("Left Click: Apply / Paint | Right Click: Erase | Click & Drag: Multi-Paint", MessageType.None);
 
         _gridScrollPos = EditorGUILayout.BeginScrollView(_gridScrollPos);
 
@@ -824,6 +924,30 @@ public class LevelEditorWindow : EditorWindow
                         {
                             Rect paxRect = new Rect(cellRect.x + padding, cellRect.y + padding, paxSize, paxSize);
                             EditorGUI.DrawRect(paxRect, passenger.Color.ToUnityColor());
+
+                            if (passenger.Type != null)
+                            {
+                                float badgeHeight = Mathf.Round(Mathf.Clamp(paxSize * 0.34f, 13f, 18f));
+                                float badgeY = Mathf.Round(paxRect.y + (paxSize - badgeHeight) * 0.5f);
+                                Rect badgeRect = new Rect(
+                                    paxRect.x,
+                                    badgeY,
+                                    paxRect.width,
+                                    badgeHeight
+                                );
+
+                                EditorGUI.DrawRect(badgeRect, new Color(0.10f, 0.12f, 0.16f, 0.82f));
+
+                                Color lineCol = Color.Lerp(passenger.Type.EditorTagColor, Color.white, 0.25f);
+                                lineCol.a = 0.75f;
+                                EditorGUI.DrawRect(new Rect(badgeRect.x, badgeRect.y, badgeRect.width, 1f), lineCol);
+                                EditorGUI.DrawRect(new Rect(badgeRect.x, badgeRect.yMax - 1f, badgeRect.width, 1f), lineCol);
+
+                                GUIStyle badgeStyle = CellBadgeStyle;
+                                badgeStyle.normal.textColor = Color.Lerp(passenger.Type.EditorTagColor, Color.white, 0.35f);
+                                GUI.Label(badgeRect, passenger.Type.GetEditorCellLabel(passenger.Parameter), badgeStyle);
+                            }
+
                             DrawRectOutline(paxRect, paxOutlineColor, 1.5f);
                         }
                     }
@@ -881,8 +1005,15 @@ public class LevelEditorWindow : EditorWindow
         switch (_selectedToolIndex)
         {
             case 0:
-                EnsureCellActive(coord);
-                SetPassenger(coord, _activeColor);
+                if (_isTypePaintMode)
+                {
+                    SetPassengerTypeOnly(coord, _activePassengerType, _activeTypeParameter);
+                }
+                else
+                {
+                    EnsureCellActive(coord);
+                    SetPassengerColorOnly(coord, _activeColor);
+                }
                 break;
 
             case 1:
@@ -978,8 +1109,8 @@ public class LevelEditorWindow : EditorWindow
             _selectedLevel.TimeLimit = Mathf.Max(GameConstants.MinTimeLimit, timeLimit);
 
             Vector2Int clampedSize = new Vector2Int(
-                Mathf.Clamp(gridX, 1, 10),
-                Mathf.Clamp(gridY, 1, 10)
+                Mathf.Clamp(gridX, 1, GameConstants.MaxGridSize),
+                Mathf.Clamp(gridY, 1, GameConstants.MaxGridSize)
             );
             _selectedLevel.GridSize = clampedSize;
 
@@ -1022,13 +1153,18 @@ public class LevelEditorWindow : EditorWindow
 
         int busCap = GameConstants.BusCapacity;
         int totalPax = _selectedLevel.Passengers.Count;
+        int totalRequiredSeats = 0;
+        for (int i = 0; i < _passengerSeatDemandByColor.Length; i++)
+        {
+            totalRequiredSeats += _passengerSeatDemandByColor[i];
+        }
         int totalSeats = _selectedLevel.Buses.Count * busCap;
 
         bool isBalanced = true;
         for (int i = 0; i < _activeBalanceColors.Count; i++)
         {
             int colorIndex = (int)_activeBalanceColors[i];
-            if (_passengerCountsByColor[colorIndex] != _busCountsByColor[colorIndex] * busCap)
+            if (_passengerSeatDemandByColor[colorIndex] != _busCountsByColor[colorIndex] * busCap)
             {
                 isBalanced = false;
                 break;
@@ -1041,11 +1177,11 @@ public class LevelEditorWindow : EditorWindow
         }
         else if (isBalanced)
         {
-            EditorGUILayout.HelpBox($"Level is Balanced! ({totalPax} Pass / {totalSeats} Seats)", MessageType.Info);
+            EditorGUILayout.HelpBox($"Level is Balanced! ({totalRequiredSeats} Req Seats / {totalSeats} Seats)", MessageType.Info);
         }
         else
         {
-            EditorGUILayout.HelpBox($"Seat Mismatch! ({totalPax} Pass vs {totalSeats} Seats)", MessageType.Warning);
+            EditorGUILayout.HelpBox($"Seat Mismatch! ({totalRequiredSeats} Req Seats vs {totalSeats} Seats)", MessageType.Warning);
         }
 
         EditorGUILayout.Space(3f);
@@ -1056,10 +1192,10 @@ public class LevelEditorWindow : EditorWindow
         {
             GameColor c = _activeBalanceColors[i];
             int colorIndex = (int)c;
-            int p = _passengerCountsByColor[colorIndex];
+            int pDemand = _passengerSeatDemandByColor[colorIndex];
             int b = _busCountsByColor[colorIndex];
             int seats = b * busCap;
-            int diff = seats - p;
+            int diff = seats - pDemand;
 
             EditorGUILayout.BeginHorizontal();
 
@@ -1074,7 +1210,7 @@ public class LevelEditorWindow : EditorWindow
 
             GUILayout.Label(c.ToString(), EditorStyles.boldLabel, GUILayout.Width(48f));
 
-            string detailText = $"{p} Pass → {b} Bus ({seats}s)";
+            string detailText = $"{pDemand} Seat → {b} Bus ({seats}s)";
             GUILayout.Label(detailText, EditorStyles.label);
 
             GUILayout.FlexibleSpace();
@@ -1146,62 +1282,115 @@ public class LevelEditorWindow : EditorWindow
         }
         else
         {
-            bool isRepaint = Event.current.type == EventType.Repaint;
-
-            for (int i = 0; i < _selectedLevel.Buses.Count; i++)
-            {
-                BusData bus = _selectedLevel.Buses[i];
-                if (bus == null) continue;
-
-                EditorGUILayout.BeginVertical(EditorStyles.helpBox);
-
-                Rect stripeRect = GUILayoutUtility.GetRect(50f, 4f, GUILayout.ExpandWidth(true));
-                if (isRepaint)
-                {
-                    EditorGUI.DrawRect(stripeRect, bus.Color.ToUnityColor());
-                }
-                EditorGUILayout.Space(2f);
-
-                EditorGUILayout.BeginHorizontal();
-                GUILayout.Label($"Bus {i + 1}", EditorStyles.boldLabel);
-                GUILayout.FlexibleSpace();
-
-                EditorGUI.BeginDisabledGroup(i == 0);
-                if (GUILayout.Button("▲", EditorStyles.miniButtonLeft, GUILayout.Width(22f)))
-                {
-                    _busToMoveUp = i;
-                }
-                EditorGUI.EndDisabledGroup();
-
-                EditorGUI.BeginDisabledGroup(i == busCount - 1);
-                if (GUILayout.Button("▼", EditorStyles.miniButtonMid, GUILayout.Width(22f)))
-                {
-                    _busToMoveDown = i;
-                }
-                EditorGUI.EndDisabledGroup();
-
-                if (GUILayout.Button("✕", EditorStyles.miniButtonRight, GUILayout.Width(22f)))
-                {
-                    _busToRemove = i;
-                }
-
-                EditorGUILayout.EndHorizontal();
-
-                EditorGUI.BeginChangeCheck();
-                GameColor newColor = (GameColor)EditorGUILayout.EnumPopup("Color", bus.Color, GUILayout.MinWidth(60f));
-                if (EditorGUI.EndChangeCheck())
-                {
-                    Undo.RecordObject(_selectedLevel, "Change Bus Color");
-                    bus.Color = newColor;
-                    RebuildLevelCache();
-                    MarkSelectedDirty();
-                }
-
-                EditorGUILayout.EndVertical();
-                EditorGUILayout.Space(2f);
-            }
+            EnsureBusReorderableList();
+            _busReorderableList.DoLayoutList();
         }
     }
+
+    private void EnsureBusReorderableList()
+    {
+        if (_selectedLevel == null) return;
+
+        if (_busReorderableList != null &&
+            _busListBoundLevel == _selectedLevel &&
+            _busReorderableList.list == _selectedLevel.Buses)
+        {
+            return;
+        }
+
+        _busListBoundLevel = _selectedLevel;
+        _busReorderableList = new ReorderableList(_selectedLevel.Buses, typeof(BusData), true, false, false, false)
+        {
+            headerHeight = 0f,
+            footerHeight = 0f,
+            elementHeight = 60f,
+            showDefaultBackground = false,
+            drawElementBackgroundCallback = DrawBusElementBackground,
+            drawElementCallback = DrawBusElement,
+            onReorderCallbackWithDetails = OnBusReorderedWithDetails
+        };
+    }
+
+    private void DrawBusElementBackground(Rect rect, int index, bool isActive, bool isFocused)
+    {
+        if (Event.current.type != EventType.Repaint) return;
+
+        if (isActive || isFocused)
+        {
+            Rect highlightRect = new Rect(rect.x, rect.y + 1f, rect.width, rect.height - 4f);
+            EditorGUI.DrawRect(highlightRect, new Color(0.24f, 0.48f, 0.90f, 0.22f));
+        }
+    }
+
+    private void DrawBusElement(Rect rect, int index, bool isActive, bool isFocused)
+    {
+        if (_selectedLevel == null || index < 0 || index >= _selectedLevel.Buses.Count) return;
+
+        BusData bus = _selectedLevel.Buses[index];
+        if (bus == null) return;
+
+        Rect cardRect = new Rect(rect.x, rect.y + 1f, rect.width, rect.height - 4f);
+        GUI.Box(cardRect, GUIContent.none, EditorStyles.helpBox);
+
+        Rect stripeRect = new Rect(cardRect.x + 4f, cardRect.y + 4f, Mathf.Max(10f, cardRect.width - 8f), 4f);
+        if (Event.current.type == EventType.Repaint)
+        {
+            EditorGUI.DrawRect(stripeRect, bus.Color.ToUnityColor());
+        }
+
+        float row1Y = stripeRect.yMax + 4f;
+        Rect titleRect = new Rect(cardRect.x + 6f, row1Y, Mathf.Max(20f, cardRect.width - 36f), 18f);
+        GUI.Label(titleRect, $"Bus {index + 1}", EditorStyles.boldLabel);
+
+        Rect removeBtnRect = new Rect(cardRect.xMax - 28f, row1Y, 22f, 18f);
+        if (GUI.Button(removeBtnRect, "X", EditorStyles.miniButton))
+        {
+            _busToRemove = index;
+        }
+
+        float row2Y = row1Y + 21f;
+        Rect colorRect = new Rect(cardRect.x + 6f, row2Y, Mathf.Max(40f, cardRect.width - 12f), 18f);
+
+        float prevLabelWidth = EditorGUIUtility.labelWidth;
+        EditorGUIUtility.labelWidth = Mathf.Floor(Mathf.Clamp(cardRect.width * 0.32f, 55f, 85f));
+
+        EditorGUI.BeginChangeCheck();
+        GameColor newColor = (GameColor)EditorGUI.EnumPopup(colorRect, "Color", bus.Color);
+        if (EditorGUI.EndChangeCheck())
+        {
+            Undo.RecordObject(_selectedLevel, "Change Bus Color");
+            bus.Color = newColor;
+            RebuildLevelCache();
+            MarkSelectedDirty();
+        }
+
+        EditorGUIUtility.labelWidth = prevLabelWidth;
+    }
+
+    private void OnBusReorderedWithDetails(ReorderableList list, int oldIndex, int newIndex)
+    {
+        if (_selectedLevel == null ||
+            oldIndex == newIndex ||
+            oldIndex < 0 || oldIndex >= _selectedLevel.Buses.Count ||
+            newIndex < 0 || newIndex >= _selectedLevel.Buses.Count)
+        {
+            return;
+        }
+
+        // Restore pre-drag order temporarily so Undo snapshots the original list order
+        BusData movedBus = _selectedLevel.Buses[newIndex];
+        _selectedLevel.Buses.RemoveAt(newIndex);
+        _selectedLevel.Buses.Insert(oldIndex, movedBus);
+
+        Undo.RecordObject(_selectedLevel, "Reorder Buses");
+
+        _selectedLevel.Buses.RemoveAt(oldIndex);
+        _selectedLevel.Buses.Insert(newIndex, movedBus);
+
+        RebuildLevelCache();
+        MarkSelectedDirty();
+    }
+
     private void AutoGenerateBuses()
     {
         RebuildLevelCache();
@@ -1213,11 +1402,11 @@ public class LevelEditorWindow : EditorWindow
 
         for (int i = 0; i < AllColors.Length; i++)
         {
-            int count = _passengerCountsByColor[i];
-            if (count <= 0) continue;
+            int seatDemand = _passengerSeatDemandByColor[i];
+            if (seatDemand <= 0) continue;
 
             GameColor color = AllColors[i];
-            int neededBuses = Mathf.CeilToInt((float)count / busCap);
+            int neededBuses = Mathf.CeilToInt((float)seatDemand / busCap);
             for (int b = 0; b < neededBuses; b++)
             {
                 _selectedLevel.Buses.Add(new BusData { Color = color });
@@ -1330,9 +1519,10 @@ public class LevelEditorWindow : EditorWindow
         return passenger;
     }
 
-    private void SetPassenger(Vector2Int coordinates, GameColor color)
+    private void SetPassengerColorOnly(Vector2Int coordinates, GameColor color)
     {
         PassengerData passenger = GetPassenger(coordinates);
+
         if (passenger == null)
         {
             passenger = new PassengerData
@@ -1347,6 +1537,15 @@ public class LevelEditorWindow : EditorWindow
         {
             passenger.Color = color;
         }
+    }
+
+    private void SetPassengerTypeOnly(Vector2Int coordinates, PassengerTypeSO type, int parameter)
+    {
+        PassengerData passenger = GetPassenger(coordinates);
+        if (passenger == null) return;
+
+        passenger.Type = type;
+        passenger.Parameter = type != null && type.HasCustomParameter ? type.ClampParameter(parameter) : 0;
     }
 
     private void RemovePassenger(Vector2Int coordinates)
@@ -1425,7 +1624,7 @@ public class LevelEditorWindow : EditorWindow
         }
     }
 
-    private static int CompareLevelsByNumber(LevelData a, LevelData b)
+    private static int CompareLevelsByNumber(LevelDataSO a, LevelDataSO b)
     {
         if (a == null && b == null) return 0;
         if (a == null) return 1;
@@ -1433,17 +1632,83 @@ public class LevelEditorWindow : EditorWindow
         return a.LevelNumber.CompareTo(b.LevelNumber);
     }
 
+    private void RefreshPassengerTypes()
+    {
+        EnsureStarterPassengerTypes();
+
+        _passengerTypes.Clear();
+        string[] guids = AssetDatabase.FindAssets("t:PassengerTypeSO");
+
+        for (int i = 0; i < guids.Length; i++)
+        {
+            string path = AssetDatabase.GUIDToAssetPath(guids[i]);
+            PassengerTypeSO type = AssetDatabase.LoadAssetAtPath<PassengerTypeSO>(path);
+            if (type != null)
+            {
+                _passengerTypes.Add(type);
+            }
+        }
+
+        _passengerTypes.Sort((a, b) => string.Compare(a.DisplayName, b.DisplayName, StringComparison.OrdinalIgnoreCase));
+
+        if (_activePassengerType != null && !_passengerTypes.Contains(_activePassengerType))
+        {
+            _activePassengerType = null;
+        }
+    }
+
+    private void EnsureStarterPassengerTypes()
+    {
+        if (Directory.Exists(PassengerTypesDirectory)) return;
+
+        Directory.CreateDirectory(PassengerTypesDirectory);
+
+        MysteryPassengerTypeSO mystery = CreateInstance<MysteryPassengerTypeSO>();
+        mystery.ConfigurePreset(
+            displayName: "Mystery",
+            shortTag: "?",
+            tagColor: new Color(0.85f, 0.55f, 1f, 1f)
+        );
+        AssetDatabase.CreateAsset(mystery, $"{PassengerTypesDirectory}/MysteryPassenger.asset");
+
+        FrozenPassengerTypeSO frozen = CreateInstance<FrozenPassengerTypeSO>();
+        frozen.ConfigurePreset(
+            displayName: "Frozen",
+            shortTag: "ICE",
+            tagColor: new Color(0.35f, 0.85f, 1f, 1f),
+            seatRequirement: 1,
+            scaleMultiplier: 1f,
+            hasParameter: true,
+            parameterLabel: "Freeze Moves",
+            defaultParameter: 3
+        );
+        AssetDatabase.CreateAsset(frozen, $"{PassengerTypesDirectory}/FrozenPassenger.asset");
+
+        PassengerTypeSO vip = CreateInstance<PassengerTypeSO>();
+        vip.ConfigurePreset(
+            displayName: "VIP",
+            shortTag: "VIP",
+            tagColor: new Color(1f, 0.82f, 0.22f, 1f),
+            seatRequirement: 2,
+            scaleMultiplier: 1.18f
+        );
+        AssetDatabase.CreateAsset(vip, $"{PassengerTypesDirectory}/VipPassenger.asset");
+
+        AssetDatabase.SaveAssets();
+        AssetDatabase.Refresh();
+    }
+
     private void RefreshLevelList()
     {
         EnsureDirectoryExists();
 
         _allLevels.Clear();
-        string[] guids = AssetDatabase.FindAssets("t:LevelData", new[] { LevelsDirectory });
+        string[] guids = AssetDatabase.FindAssets("t:LevelDataSO", new[] { LevelsDirectory });
 
         for (int i = 0; i < guids.Length; i++)
         {
             string path = AssetDatabase.GUIDToAssetPath(guids[i]);
-            LevelData level = AssetDatabase.LoadAssetAtPath<LevelData>(path);
+            LevelDataSO level = AssetDatabase.LoadAssetAtPath<LevelDataSO>(path);
             if (level != null)
             {
                 EnsureLevelDataLists(level);
@@ -1459,9 +1724,11 @@ public class LevelEditorWindow : EditorWindow
         }
     }
 
-    public void SelectLevel(LevelData level)
+    public void SelectLevel(LevelDataSO level)
     {
         _selectedLevel = level;
+        _busReorderableList = null;
+        _busListBoundLevel = null;
         EnsureLevelDataLists(_selectedLevel);
         RebuildLevelCache();
         ResetDeferredBusFlags();
@@ -1475,7 +1742,7 @@ public class LevelEditorWindow : EditorWindow
         int nextNumber = 1;
         for (int i = 0; i < _allLevels.Count; i++)
         {
-            LevelData lvl = _allLevels[i];
+            LevelDataSO lvl = _allLevels[i];
             if (lvl != null && lvl.LevelNumber >= nextNumber)
             {
                 nextNumber = lvl.LevelNumber + 1;
@@ -1485,7 +1752,7 @@ public class LevelEditorWindow : EditorWindow
         string assetPath = $"{LevelsDirectory}/Level{nextNumber}.asset";
         assetPath = AssetDatabase.GenerateUniqueAssetPath(assetPath);
 
-        LevelData newLevel = CreateInstance<LevelData>();
+        LevelDataSO newLevel = CreateInstance<LevelDataSO>();
         newLevel.LevelNumber = nextNumber;
         newLevel.TimeLimit = 60f;
         newLevel.GridSize = new Vector2Int(5, 5);
@@ -1498,7 +1765,7 @@ public class LevelEditorWindow : EditorWindow
         SelectLevel(newLevel);
     }
 
-    private void DeleteLevel(LevelData level)
+    private void DeleteLevel(LevelDataSO level)
     {
         string path = AssetDatabase.GetAssetPath(level);
         if (!string.IsNullOrEmpty(path))

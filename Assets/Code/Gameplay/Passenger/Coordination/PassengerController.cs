@@ -47,7 +47,23 @@ public class PassengerController : MonoBehaviour
         RefreshPassengerMovement();
     }
 
-    private void HandleLevelLoaded(LevelData data, float timeLimit, LevelState state)
+    private void Update()
+    {
+        if (!CanProcess || _passengerSpawner == null || _passengerSpawner.Passengers == null) return;
+
+        float dt = Time.deltaTime;
+        IReadOnlyList<Passenger> passengers = _passengerSpawner.Passengers;
+        for (int i = 0; i < passengers.Count; i++)
+        {
+            Passenger passenger = passengers[i];
+            if (passenger != null)
+            {
+                passenger.TickMechanic(dt);
+            }
+        }
+    }
+
+    private void HandleLevelLoaded(LevelDataSO data, float timeLimit, LevelState state)
     {
         Initialize();
     }
@@ -132,6 +148,7 @@ public class PassengerController : MonoBehaviour
         if (!_gridPathfinder.TryGetPath(passenger, _gridBuilder, out List<Vector3> route)) return;
 
         Bus bus = _busQueue != null ? _busQueue.ActiveBus : null;
+        bool movedFromGrid = false;
 
         if (_boardingCoordinator.CanReserveBus(passenger, bus))
         {
@@ -142,6 +159,7 @@ public class PassengerController : MonoBehaviour
             }
 
             _gridDirty = true;
+            movedFromGrid = true;
             _boardingCoordinator.StartTripToBus(passenger, bus, route);
 
             GameEvents.TriggerPassengerMoveStarted();
@@ -149,13 +167,34 @@ public class PassengerController : MonoBehaviour
         else if (_waitingSlots != null && _waitingSlots.TryReserveSlot(passenger, out GridCell slot))
         {
             _gridDirty = true;
+            movedFromGrid = true;
             _boardingCoordinator.StartTripToSlot(passenger, slot, route);
 
             GameEvents.TriggerPassengerMoveStarted();
         }
 
+        if (movedFromGrid)
+        {
+            NotifyOtherPassengersMoved(passenger);
+        }
+
         RefreshPassengerMovement();
         CheckResult();
+    }
+
+    private void NotifyOtherPassengersMoved(Passenger movedPassenger)
+    {
+        if (_passengerSpawner == null || _passengerSpawner.Passengers == null) return;
+
+        IReadOnlyList<Passenger> passengers = _passengerSpawner.Passengers;
+        for (int i = 0; i < passengers.Count; i++)
+        {
+            Passenger other = passengers[i];
+            if (other != null && other != movedPassenger)
+            {
+                other.NotifyOtherPassengerMoved(movedPassenger);
+            }
+        }
     }
 
     private void HandlePassengerBoarded()
@@ -191,7 +230,16 @@ public class PassengerController : MonoBehaviour
             foreach (Passenger passenger in _passengerSpawner.Passengers)
             {
                 if (passenger == null) continue;
-                passenger.SetCanMove(canProcess && _gridPathfinder.CanReachExit(passenger, _gridBuilder));
+
+                if (canProcess)
+                {
+                    bool canReach = _gridPathfinder.CanReachExit(passenger, _gridBuilder);
+                    passenger.UpdateReachability(canReach);
+                }
+                else
+                {
+                    passenger.SetCanMove(false);
+                }
             }
         }
     }

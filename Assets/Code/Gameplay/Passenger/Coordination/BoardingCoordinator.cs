@@ -40,21 +40,24 @@ public class BoardingCoordinator
         if (bus == null) return 0;
 
         int count = 0;
-        foreach (Trip trip in _trips.Values)
+        foreach (KeyValuePair<Passenger, Trip> entry in _trips)
         {
-            if (trip.Bus == bus) count++;
+            if (entry.Value.Bus == bus && entry.Key != null)
+            {
+                count += entry.Key.RequiredSeats;
+            }
         }
         return count;
     }
 
     public bool CanReserveBus(Passenger passenger, Bus bus)
     {
-        if (_busQueue == null || !_busQueue.IsBoardingOpen) return false;
+        if (passenger == null || _busQueue == null || !_busQueue.IsBoardingOpen) return false;
         if (bus == null || bus != _busQueue.ActiveBus) return false;
         if (passenger.Color != bus.Color) return false;
 
         int reservedSeats = GetReservedSeatCount(bus);
-        return bus.PassengerCount + reservedSeats < GameConstants.BusCapacity;
+        return bus.PassengerCount + reservedSeats + passenger.RequiredSeats <= GameConstants.BusCapacity;
     }
 
     public void StartTripToBus(Passenger passenger, Bus bus, List<Vector3> route)
@@ -172,8 +175,22 @@ public class BoardingCoordinator
 
             while ((canProcessPredicate == null || canProcessPredicate()) && bus != null)
             {
-                if (!_waitingSlots.TryGetPassenger(bus.Color, out Passenger passenger)) break;
-                if (!CanReserveBus(passenger, bus)) break;
+                if (_waitingSlots == null || _waitingSlots.Slots == null) break;
+
+                Passenger candidate = null;
+                foreach (GridCell slot in _waitingSlots.Slots)
+                {
+                    if (slot == null || !slot.IsOccupied) continue;
+                    Passenger slotPassenger = slot.Passenger;
+                    if (slotPassenger == null || slotPassenger.State != PassengerState.Waiting) continue;
+                    if (CanReserveBus(slotPassenger, bus))
+                    {
+                        candidate = slotPassenger;
+                        break;
+                    }
+                }
+
+                if (candidate == null) break;
 
                 if (_walkway == null || !bus.HasBoardingPoint)
                 {
@@ -183,10 +200,10 @@ public class BoardingCoordinator
 
                 List<Vector3> route = new List<Vector3>
                 {
-                    passenger.transform.position
+                    candidate.transform.position
                 };
 
-                StartTripToBus(passenger, bus, route);
+                StartTripToBus(candidate, bus, route);
             }
         }
         finally
@@ -251,4 +268,3 @@ public class BoardingCoordinator
         _walkway = null;
     }
 }
-

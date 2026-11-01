@@ -8,8 +8,8 @@ public class LevelManager : MonoBehaviour
     [SerializeField] private BusQueue _busQueue;
     [SerializeField] private WaitingSlots _waitingSlots;
 
-    private LevelData[] _levels = Array.Empty<LevelData>();
-    private LevelData _levelData;
+    private LevelDataSO[] _levels = Array.Empty<LevelDataSO>();
+    private LevelDataSO _levelData;
 
     private int _currentLevelIndex = -1;
     private bool _hasLoadedLevel;
@@ -52,11 +52,11 @@ public class LevelManager : MonoBehaviour
     private bool TryLoadAllLevels(out string error)
     {
         error = null;
-        _levels = Resources.LoadAll<LevelData>("Levels");
+        _levels = Resources.LoadAll<LevelDataSO>("Levels");
 
         if (_levels == null || _levels.Length == 0)
         {
-            error = "LevelData could not be found in Resources/Levels.";
+            error = "LevelDataSO could not be found in Resources/Levels.";
             return false;
         }
 
@@ -97,7 +97,7 @@ public class LevelManager : MonoBehaviour
         }
 
         _hasLoadedLevel = false;
-        LevelData data = _levels[index];
+        LevelDataSO data = _levels[index];
         SetState(LevelState.Loading);
 
         if (_gridBuilder == null || _passengerSpawner == null || _busQueue == null)
