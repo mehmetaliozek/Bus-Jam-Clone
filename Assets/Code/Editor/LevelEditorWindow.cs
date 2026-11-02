@@ -1637,7 +1637,7 @@ public class LevelEditorWindow : EditorWindow
         EnsureStarterPassengerTypes();
 
         _passengerTypes.Clear();
-        string[] guids = AssetDatabase.FindAssets("t:PassengerTypeSO");
+        string[] guids = AssetDatabase.FindAssets("t:PassengerTypeSO", new[] { PassengerTypesDirectory });
 
         for (int i = 0; i < guids.Length; i++)
         {

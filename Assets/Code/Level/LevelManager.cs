@@ -46,8 +46,17 @@ public class LevelManager : MonoBehaviour
         GameEvents.VibrationEnabledChanged -= HandleVibrationEnabledChanged;
     }
 
-    private void HandleSoundEnabledChanged(bool isEnabled) => _isSoundEnabled = isEnabled;
-    private void HandleVibrationEnabledChanged(bool isEnabled) => _isVibrationEnabled = isEnabled;
+    private void HandleSoundEnabledChanged(bool isEnabled)
+    {
+        _isSoundEnabled = isEnabled;
+        SaveCurrentGame();
+    }
+
+    private void HandleVibrationEnabledChanged(bool isEnabled)
+    {
+        _isVibrationEnabled = isEnabled;
+        SaveCurrentGame();
+    }
 
     private bool TryLoadAllLevels(out string error)
     {
@@ -159,6 +168,7 @@ public class LevelManager : MonoBehaviour
         if (State != LevelState.Playing) return;
         SetState(LevelState.Completed);
         Debug.Log($"Level {CurrentLevelNumber} completed.");
+        SaveCurrentGame();
     }
 
     private void FailLevel(string reason)
@@ -184,12 +194,20 @@ public class LevelManager : MonoBehaviour
     {
         if (!_hasLoadedLevel || _levelData == null) return;
 
+        int levelToSave = GetLevelNumberToSave();
+
         SaveManager.Save(new SaveData
         {
-            LevelNumber = CurrentLevelNumber,
+            LevelNumber = levelToSave,
             IsSoundEnabled = _isSoundEnabled,
             IsVibrationEnabled = _isVibrationEnabled
         });
+    }
+
+    private int GetLevelNumberToSave()
+    {
+        if (State == LevelState.Completed && HasNextLevel) return _levels[_currentLevelIndex + 1].LevelNumber;
+        return CurrentLevelNumber;
     }
 
     private void OnApplicationPause(bool paused)

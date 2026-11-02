@@ -9,12 +9,17 @@ public class AudioManager : MonoBehaviour
     [SerializeField] private AudioClip _passengerMoveClip;
     [SerializeField] private AudioClip _busDepartureClip;
     [SerializeField] private AudioClip _buttonClickClip;
+    [SerializeField] private AudioClip _levelCompletedClip;
+    [SerializeField] private AudioClip _levelFailedClip;
+
 
     [Header("Volumes")]
     [SerializeField, Range(0f, 1f)] private float _levelReadyVolume = 1f;
     [SerializeField, Range(0f, 1f)] private float _passengerMoveVolume = 0.7f;
     [SerializeField, Range(0f, 1f)] private float _busDepartureVolume = 1f;
     [SerializeField, Range(0f, 1f)] private float _buttonClickVolume = 1f;
+    [SerializeField, Range(0f, 1f)] private float _levelCompletedVolume = 1f;
+    [SerializeField, Range(0f, 1f)] private float _levelFailedVolume = 1f;
 
     private AudioSource _audioSource;
     private bool _hasPlayedStartSound;
@@ -51,19 +56,34 @@ public class AudioManager : MonoBehaviour
 
     private void HandleLevelStateChanged(LevelState state)
     {
-        if (state == LevelState.Loading)
+        switch (state)
         {
-            _hasPlayedStartSound = false;
-            StopSounds();
-        }
-        else if (state == LevelState.Playing && !_hasPlayedStartSound)
-        {
-            _hasPlayedStartSound = true;
-            PlaySound(_levelReadyClip, _levelReadyVolume);
-        }
-        else if (state is LevelState.Paused or LevelState.Failed)
-        {
-            StopSounds();
+            case LevelState.None:
+                break;
+            case LevelState.Loading:
+                _hasPlayedStartSound = false;
+                StopSounds();
+                break;
+            case LevelState.Ready:
+                break;
+            case LevelState.Playing:
+                if (!_hasPlayedStartSound)
+                {
+                    _hasPlayedStartSound = true;
+                    PlaySound(_levelReadyClip, _levelReadyVolume);
+                }
+                break;
+            case LevelState.Completed:
+                PlaySound(_levelCompletedClip, _levelCompletedVolume);
+                break;
+            case LevelState.Failed:
+                PlaySound(_levelFailedClip, _levelFailedVolume);
+                break;
+            case LevelState.Paused:
+                StopSounds();
+                break;
+            default:
+                break;
         }
     }
 

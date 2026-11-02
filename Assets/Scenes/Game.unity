@@ -3129,10 +3129,14 @@ MonoBehaviour:
   _passengerMoveClip: {fileID: 8300000, guid: 8914e6b2126e5cf46aa5618e3c83ed23, type: 3}
   _busDepartureClip: {fileID: 8300000, guid: 6e34ec75b2204e54b9862d6aa5c9e102, type: 3}
   _buttonClickClip: {fileID: 8300000, guid: e6220f8b47222f84aae6362852860815, type: 3}
+  _levelCompletedClip: {fileID: 8300000, guid: 28fe37dea2157544681bf1566eeca020, type: 3}
+  _levelFailedClip: {fileID: 8300000, guid: 91fabc77fbc512b458072f9bfc1938e7, type: 3}
   _levelReadyVolume: 0.3
   _passengerMoveVolume: 0.75
   _busDepartureVolume: 0.5
   _buttonClickVolume: 1
+  _levelCompletedVolume: 1
+  _levelFailedVolume: 0.5
 --- !u!4 &764064397 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 1314699199724755859, guid: 27bc5e58eddf5bc4f8697cc77f5f6118,
@@ -6131,7 +6135,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: Contiune
+  m_text: Continue
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: eb057ee4cf1fd5f4b8474e3d7f436a78, type: 2}
   m_sharedMaterial: {fileID: 2990746328592212454, guid: eb057ee4cf1fd5f4b8474e3d7f436a78,
